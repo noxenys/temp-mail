@@ -6,7 +6,8 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "npm run d1:setup && wrangler deploy",
+    "deploy": "npm run build && npm run d1:setup && wrangler deploy",
+    "build": "node build.js",
     "d1:setup": "wrangler d1 create temp_email_db --remote || true && npm run d1:execute-basic:remote",
     "d1:execute:local": "wrangler d1 execute TEMP_MAIL_DB --local --file=d1-init.sql",
     "d1:execute:remote": "wrangler d1 execute TEMP_MAIL_DB --remote --file=d1-init.sql",
@@ -17,10 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/**/*.js",
+    "lint": "eslint .",
     "lint:fix": "eslint src/**/*.js --fix",
     "type-check": "tsc --noEmit",
-    "build": "tsc",
     "ci:test": "npm run lint && npm run type-check && npm run test:coverage"
   },
   "dependencies": {

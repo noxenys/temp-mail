@@ -15,6 +15,10 @@ worker-configuration.d.ts
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+
+# 构建备份文件
+.backup/
 
 # Logs
 logs
