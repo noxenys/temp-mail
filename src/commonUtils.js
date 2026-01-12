@@ -1,7 +1,7 @@
-export function generateRandomId(length = 8) {
+export function generateRandomId(length = 16) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
-  const len = Math.max(4, Math.min(32, Number(length) || 8));
+  const len = Math.max(4, Math.min(32, Number(length) || 16));
   for (let i = 0; i < len; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -28,3 +28,21 @@ export function formatTs(ts) {
   } catch (_) { return ts; }
 }
 
+// 简单邮箱有效性校验（用于测试）
+export function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email || ''));
+}
+
+// 时间戳格式化（用于测试）：返回 YYYY-MM-DD HH:mm:ss
+export function formatTimestamp(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const yyyy = d.getUTCFullYear();
+  const mm = pad(d.getUTCMonth() + 1);
+  const dd = pad(d.getUTCDate());
+  const hh = pad(d.getUTCHours());
+  const mi = pad(d.getUTCMinutes());
+  const ss = pad(d.getUTCSeconds());
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}

@@ -1,23 +1,23 @@
 :root{
-  --surface: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 20%, #f1f5f9 100%);
-  --surface-overlay: linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.95) 100%);
-  --card: rgba(255, 255, 255, 0.4);
-  --card-shadow: rgba(255, 255, 255, 0.2);
-  --card-glass: rgba(255, 255, 255, 0.3);
-  --muted: #64748b;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --primary-light: rgba(59, 130, 246, 0.1);
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
-  --border-glass: rgba(255, 255, 255, 0.3);
-  --text: #1e293b;
-  --danger: #ef4444;
+  --surface: linear-gradient(135deg, #0f172a 0%, #111827 40%, #0b1220 100%);
+  --surface-overlay: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(11, 18, 32, 0.95) 100%);
+  --card: rgba(17, 24, 39, 0.6);
+  --card-shadow: rgba(17, 24, 39, 0.3);
+  --card-glass: rgba(17, 24, 39, 0.5);
+  --muted: #94a3b8;
+  --primary: #06b6d4;
+  --primary-hover: #0891b2;
+  --primary-light: rgba(6, 182, 212, 0.12);
+  --border: #1f2937;
+  --border-light: #0b1220;
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --text: #e5e7eb;
+  --danger: #f87171;
   --radius: 20px;
   --radius-sm: 12px;
-  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  --shadow-glass: 0 8px 32px rgba(31, 38, 135, 0.1);
+  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -74,9 +74,9 @@ body::before {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(6, 182, 212, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.16) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(244, 63, 94, 0.12) 0%, transparent 50%);
   animation: backgroundShift 15s ease-in-out infinite alternate;
 }
 
@@ -117,7 +117,7 @@ body::before {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--primary), #8b5cf6, #ec4899);
+  background: linear-gradient(90deg, #06b6d4, #6366f1, #f43f5e);
 }
 
 @keyframes cardSlideIn {
@@ -147,7 +147,7 @@ h1 {
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 32px 0;
-  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  background: linear-gradient(135deg, #06b6d4, #6366f1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -197,7 +197,7 @@ h1 {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .input::placeholder {
@@ -239,7 +239,7 @@ h1 {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 20px rgba(6, 182, 212, 0.35);
 }
 
 .btn:active {

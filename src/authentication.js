@@ -75,6 +75,48 @@ export async function verifyJwt(secret, cookieHeader) {
 }
 
 /**
+ * 兼容测试的简化创建函数：使用 process.env.JWT_SECRET
+ * @param {object} payload - 负载数据
+ * @returns {Promise<string>} 原始JWT令牌字符串
+ */
+export async function createJWT(payload = {}) {
+  const secret = (globalThis.process?.env?.JWT_SECRET) || 'test-secret-key';
+  return await createJwt(secret, payload);
+}
+
+/**
+ * 兼容测试的简化验证函数：直接接收令牌字符串
+ * @param {string} token - 原始JWT令牌
+ * @returns {Promise<object>} 验证通过的负载
+ * @throws {Error} 当令牌无效或过期时抛出
+ */
+export async function verifyJWT(token) {
+  const secret = (globalThis.process?.env?.JWT_SECRET) || 'test-secret-key';
+  const payload = await verifyRawToken(secret, token);
+  if (!payload) { throw new Error('Invalid token'); }
+  return payload;
+}
+
+// 原始令牌验证（不要求 role 字段，供测试使用）
+async function verifyRawToken(secret, token) {
+  try {
+    if (!token || token.split('.').length !== 3) { return false; }
+    const parts = token.split('.');
+    const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])));
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') { return false; }
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+    const data = parts[0] + '.' + parts[1];
+    const ok = await crypto.subtle.verify('HMAC', key, base64UrlDecode(parts[2]), encoder.encode(data));
+    if (!ok) { return false; }
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp <= now) { return false; }
+    return payload;
+  } catch (_) { return false; }
+}
+
+/**
  * 构建会话Cookie字符串
  * @param {string} token - JWT令牌
  * @param {string} reqUrl - 请求URL，用于判断是否使用安全标志，默认为空字符串

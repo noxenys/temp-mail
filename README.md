@@ -13,34 +13,29 @@
 
 ## 一键部署
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/noxenys/temp-email)
+### [一键部署指南](docs/yijianbushu.md)
 
- ### [一键部署指南](docs/yijianbushu.md)
-
-> Deploy 按钮流程会提示你填写必要的 secrets/vars（例如 JWT_TOKEN / MAIL_DOMAIN）。
-> 部署后需要在 Cloudflare Email Routing 中将 catch-all 绑定到该 Worker，才能接收邮件。
+部署后需要在 Cloudflare Email Routing 中将 catch-all 绑定到该 Worker，才能接收邮件。
 
 ## 📸 项目展示
-### 体验地址： https://mailexhibit.dinging.top/
+本节保留展示入口，待你制作后补充：
+- 可在 `pic/` 目录添加你的展示图片，例如：`pic/exhibit-home.jpg`、`pic/exhibit-mobile.jpg`
+- README 中以 `<img src="pic/..." />` 引用，或在 `docs/zhanshi.md` 维护更详细的展示文档
+- 体验地址与账号可按需补充到本节
 
-### 体验账号： guest
-### 体验密码： admin
-### 页面展示
+更多展示详见：[展示文档](docs/zhanshi.md)
+
+### 体验地址： `https://mailexhibit.dinging.top/`
+
+### 体验账号：
+
+### 体验密码：
 
 #### 登陆
 ![登陆页面](pic/dlu.png)
+
 #### 首页
 ![首页展示](pic/shouye.png)
-
-### 手机端生成与历史
-<div style="display: flex; gap: 20px; justify-content: center; margin: 20px 0;">
-  <img src="./pic/phone/shouye.png" alt="手机端生成邮箱" style="height: 400px;" />
-  <img src="./pic/phone/lishi.png" alt="手机端历史邮箱" style="height: 400px;" />
-</div>
-
-### 单个邮箱页
-
-![单个邮箱首页](./pic/v4/youxiang.png)
 
 ### 全部邮箱预览
 ![单个邮箱首页](./pic/v4/xiugaiquanju.png)
@@ -48,6 +43,14 @@
 
 
 #### [更多展示点击查看](docs/zhanshi.md)
+### 手机端生成与历史
+<div style="display: flex; gap: 20px; justify-content: center; margin: 20px 0;">
+  <img src="./pic/phone/shouye.png" alt="手机端生成邮箱" style="height: 400px;" />
+  <img src="./pic/phone/lishi.png" alt="手机端历史邮箱" style="height: 400px;" />
+</div>
+
+### 单个邮箱页
+![单个邮箱首页](./pic/v4/youxiang.png)
 
 ## 功能特性
 
@@ -144,7 +147,7 @@
 ### V5.0
 - [X] **SQL优化**：大幅降低数据库行读取数，提升查询性能
 - [X] **邮箱管理增强**：添加邮箱管理页面，支持根据域名筛选和登录权限筛选
-- [X] **兼容性升级**：更新至2026-01-01兼容性日期，支持最新Cloudflare Workers特性
+- [X] **兼容性升级**：更新至2026-01-11兼容性日期，支持最新Cloudflare Workers特性
 - [X] **性能优化**：优化 HTMLRewriter 使用方式，提升页面渲染性能
 
 ### V5.5（规划中）
@@ -417,7 +420,24 @@ Cloudflare 连接 GitHub 仓库部署
 - 如果使用 Git 集成而非 wrangler deploy，请在 Dashboard → Workers → Settings → Variables 中手动配置上述变量
 - `[assets]` 已指向 `public/`，静态页面由 Workers + Assets 提供
 - 数据库名称为 `temp_email_db`，绑定名为 `TEMP_MAIL_DB`
-- R2存储桶名称为 `temp_email_eml`，绑定名为 `MAIL_EML`
+- R2存储桶名称为 `temp-mail-eml`，绑定名为 `MAIL_EML`
+
+### 方式三：GitHub Actions 部署（适配本项目）
+
+适合希望自动同步更新且隐私隔离的用户。无需按钮授权，所有密钥保存在你自己的 Fork 仓库。
+
+步骤：
+- Fork 仓库到你的 GitHub 账户
+- 在 Fork 仓库 Settings → Secrets and variables → Actions 添加以下 Secrets（至少前五项）：
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `MAIL_DOMAIN`
+  - `ADMIN_PASSWORD`
+  - `JWT_TOKEN`
+  - 可选：`ADMIN_NAME`、`GUEST_PASSWORD`、`RESEND_API_KEY` 或 `RESEND_TOKEN`、`FORWARD_RULES`
+- 打开 Actions，选择“Manual Deploy (Workers)”并运行工作流
+- 首次部署后，如需初始化数据库：运行 `npm run d1:execute-basic:remote`
+- 在 Cloudflare Email Routing 中添加 catch‑all，并绑定到该 Worker
 
 ### 配置邮件路由（必需用于收取真实邮件）
 
@@ -589,24 +609,18 @@ fetch('/api/send', {
 
 > 本地查询/初始化请使用 --local（或 :local 脚本）；远程查询/初始化请使用 --remote（或 :remote 脚本）。
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=noxenys/temp-email&type=Date)](https://www.star-history.com/#noxenys/temp-email&Date)
-
-## 联系方式
-
-- 微信：`iYear1213`
-
 ## Buy me a coffee
 
 如果你觉得本项目对你有帮助，欢迎赞赏支持：
 
 <p align="left">
-  <img src="pic/alipay.jpg" alt="支付宝赞赏码" height="400" />
-  <img src="pic/weichat.jpg" alt="微信赞赏码" height="400" />
+  <img src="pic/donate-alipay.jpg" alt="支付宝赞赏码" height="400" />
+  <img src="pic/donate-wechat.jpg" alt="微信赞赏码" height="400" />
+  <br/>
+  <em>请将你的赞赏码图片保存为上述文件名并放置到 pic/ 目录。</em>
 </p>
 
 
 ## 许可证
 
-MIT License
+Apache-2.0 License

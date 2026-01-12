@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -88,3 +89,57 @@ jobs:
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_PRODUCTION }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-manual:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint and typecheck
+      run: |
+        npm run lint
+        npm run type-check
+
+    - name: Inject Secrets to Cloudflare
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        MAIL_DOMAIN: ${{ secrets.MAIL_DOMAIN }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        JWT_TOKEN: ${{ secrets.JWT_TOKEN }}
+        ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+        GUEST_PASSWORD: ${{ secrets.GUEST_PASSWORD }}
+        RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        RESEND_TOKEN: ${{ secrets.RESEND_TOKEN }}
+        FORWARD_RULES: ${{ secrets.FORWARD_RULES }}
+      run: |
+        echo "$MAIL_DOMAIN" | npx wrangler secret put MAIL_DOMAIN
+        echo "$ADMIN_PASSWORD" | npx wrangler secret put ADMIN_PASSWORD
+        echo "$JWT_TOKEN" | npx wrangler secret put JWT_TOKEN
+        if [ -n "$ADMIN_NAME" ]; then echo "$ADMIN_NAME" | npx wrangler secret put ADMIN_NAME; fi
+        if [ -n "$GUEST_PASSWORD" ]; then echo "$GUEST_PASSWORD" | npx wrangler secret put GUEST_PASSWORD; fi
+        if [ -n "$RESEND_API_KEY" ]; then echo "$RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY; fi
+        if [ -n "$RESEND_TOKEN" ]; then echo "$RESEND_TOKEN" | npx wrangler secret put RESEND_TOKEN; fi
+        if [ -n "$FORWARD_RULES" ]; then echo "$FORWARD_RULES" | npx wrangler secret put FORWARD_RULES; fi
+
+    - name: Deploy to Cloudflare Workers
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: npx wrangler deploy
+
+    - name: Initialize D1 schema (optional)
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: npm run d1:execute-basic:remote
