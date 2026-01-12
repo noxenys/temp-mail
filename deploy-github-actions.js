@@ -126,7 +126,42 @@ try {
     console.log('⏭️ 数据库已存在，跳过初始化步骤');
   }
   
-  // 4. 部署到 Cloudflare Workers
+  // 4. 设置环境变量（如果提供了）
+  console.log('🔧 设置环境变量...');
+  const envVars = [
+    // 必需环境变量
+    { name: 'ADMIN_PASSWORD', value: process.env.ADMIN_PASSWORD },
+    { name: 'JWT_TOKEN', value: process.env.JWT_TOKEN },
+    { name: 'JWT_SECRET', value: process.env.JWT_SECRET },
+    { name: 'MAIL_DOMAIN', value: process.env.MAIL_DOMAIN },
+    
+    // 可选环境变量（不填写不影响项目正常使用）
+    { name: 'GUEST_PASSWORD', value: process.env.GUEST_PASSWORD },
+    { name: 'ADMIN_USERNAME', value: process.env.ADMIN_USERNAME },
+    { name: 'ADMIN_PASS', value: process.env.ADMIN_PASS },
+    { name: 'RESEND_API_KEY', value: process.env.RESEND_API_KEY },
+    { name: 'RESEND_TOKEN', value: process.env.RESEND_TOKEN },
+    { name: 'FORWARD_RULES', value: process.env.FORWARD_RULES },
+    { name: 'CACHE_TTL', value: process.env.CACHE_TTL }
+  ];
+  
+  for (const envVar of envVars) {
+    if (envVar.value) {
+      try {
+        execSync(`npx wrangler secret put ${envVar.name}`, {
+          input: envVar.value,
+          stdio: ['pipe', 'inherit', 'inherit']
+        });
+        console.log(`✅ 已设置环境变量: ${envVar.name}`);
+      } catch (error) {
+        console.warn(`⚠️ 设置环境变量 ${envVar.name} 失败:`, error.message);
+      }
+    } else {
+      console.log(`ℹ️ 未提供环境变量: ${envVar.name}`);
+    }
+  }
+  
+  // 5. 部署到 Cloudflare Workers
   console.log('☁️ 部署到 Cloudflare Workers...');
   execSync('npx wrangler deploy', { stdio: 'inherit' });
   

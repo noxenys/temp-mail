@@ -28,5 +28,21 @@ jobs:
     - name: Deploy to Cloudflare Workers
       run: node deploy-github-actions.js
       env:
-        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Cloudflare 认证信息
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          
+          # 必需环境变量
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          JWT_TOKEN: ${{ secrets.JWT_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MAIL_DOMAIN: ${{ secrets.MAIL_DOMAIN }}
+          
+          # 可选环境变量（不填写不影响项目正常使用）
+          GUEST_PASSWORD: ${{ secrets.GUEST_PASSWORD }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_TOKEN: ${{ secrets.RESEND_TOKEN }}
+          FORWARD_RULES: ${{ secrets.FORWARD_RULES }}
+          CACHE_TTL: ${{ secrets.CACHE_TTL }}
