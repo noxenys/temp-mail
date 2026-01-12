@@ -1,5 +1,6 @@
 // 测试环境设置
 import { beforeEach, afterEach, vi } from 'vitest';
+import { webcrypto as nodeWebcrypto } from 'node:crypto';
 
 // 模拟 Cloudflare Workers 环境
 globalThis.caches = {
@@ -42,6 +43,10 @@ globalThis.MAIL_EML = {
 globalThis.ASSETS = {
   fetch: vi.fn(() => Promise.resolve(new Response()))
 };
+
+if (typeof globalThis.crypto === 'undefined') {
+  globalThis.crypto = nodeWebcrypto;
+}
 
 // 清理模拟
 beforeEach(() => {
