@@ -1,14 +1,10 @@
+/* global logger */
 import { initDatabase } from './database.js';
 import { handleEmailReceive } from './apiHandlers.js';
-import { extractEmail } from './commonUtils.js';
-import { forwardByLocalPart } from './emailForwarder.js';
-import { parseEmailBody, extractVerificationCode } from './emailParser.js';
-import { createRouter, authMiddleware, resolveAuthPayload } from './routes.js';
+import { createRouter, authMiddleware } from './routes.js';
 import { createAssetManager } from './assetManager.js';
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
 import { rateLimitMiddleware } from './rateLimit.js';
-import logger from './logger.js';
-
 
 export default {
   /**
@@ -19,12 +15,14 @@ export default {
    * @returns {Promise<Response>} HTTP响应对象
    */
   async fetch(request, env, ctx) {
+    void ctx;
     const startTime = Date.now();
     const logId = logger.generateLogId ? logger.generateLogId() : `req-${Date.now()}`;
     let response;
+    let url;
     
     try {
-      const url = new URL(request.url);
+      url = new URL(request.url);
       let DB;
       
       // 记录请求开始
@@ -114,7 +112,7 @@ export default {
     } catch (error) {
       logger.error('服务器内部错误', error, {
         method: request.method,
-        path: url.pathname
+        path: url ? url.pathname : ''
       }, logId);
       response = new Response('服务器内部错误', { status: 500 });
       return response;
@@ -126,7 +124,7 @@ export default {
       
       logger.info('HTTP请求完成', {
         method: request.method,
-        path: url.pathname,
+        path: url ? url.pathname : '',
         status: statusCode,
         duration: duration
       }, logId);
@@ -141,6 +139,7 @@ export default {
    * @returns {Promise<void>} 处理完成后无返回值
    */
   async email(message, env, ctx) {
+    void ctx;
     const logId = logger.generateLogId ? logger.generateLogId() : `email-${Date.now()}`;
     
     try {

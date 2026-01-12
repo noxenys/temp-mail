@@ -85,7 +85,7 @@ export async function hasColumn(db, tableName, columnName) {
  */
 export async function getCachedMailboxId(db, address) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) return null;
+  if (!normalized) {return null;}
   
   const cached = CACHE.mailboxIds.get(normalized);
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL.mailboxId) {
@@ -112,7 +112,7 @@ export async function getCachedMailboxId(db, address) {
  */
 export function updateMailboxIdCache(address, id) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized || !id) return;
+  if (!normalized || !id) {return;}
   
   CACHE.mailboxIds.set(normalized, {
     id,

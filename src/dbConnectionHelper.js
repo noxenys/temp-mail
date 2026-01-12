@@ -36,7 +36,7 @@ export function getDatabase(env) {
         // 首次找到时打印明确的绑定选择日志
         if (_cachedBindingName !== bindingName) {
           console.log(`✅ 数据库绑定已选择: ${bindingName}`);
-          console.log(`📝 提示: 推荐在 wrangler.toml 中使用 TEMP_MAIL_DB 作为绑定名称`);
+          console.log('📝 提示: 推荐在 wrangler.toml 中使用 TEMP_MAIL_DB 作为绑定名称');
           _cachedBindingName = bindingName;
         }
         _cachedDB = db;
@@ -62,7 +62,7 @@ export function getDatabase(env) {
  * @returns {Promise<boolean>} 连接是否有效
  */
 export async function validateDatabaseConnection(db) {
-  if (!db) return false;
+  if (!db) {return false;}
   
   try {
     // 尝试执行一个简单的查询来验证连接
@@ -75,7 +75,7 @@ export async function validateDatabaseConnection(db) {
 }
 
 // 缓存验证结果，避免重复验证
-let _validationCache = new Map();
+const _validationCache = new Map();
 
 /**
  * 获取数据库连接并进行验证

@@ -1,10 +1,11 @@
+ 
 /**
  * 解析邮件正文，提取文本和HTML内容
  * @param {string} raw - 原始邮件内容
  * @returns {object} 包含text和html属性的对象
  */
 export function parseEmailBody(raw) {
-  if (!raw) return { text: '', html: '' };
+  if (!raw) {return { text: '', html: '' };}
   const { headers: topHeaders, body: topBody } = splitHeadersAndBody(raw);
   return parseEntity(topHeaders, topBody);
 }
@@ -30,7 +31,7 @@ function parseEntity(headers, body) {
     // 某些邮件不带 content-type 或是 message/rfc822 等，将其作为纯文本尝试
     if (!ct || ct === '') {
       const guessHtml = guessHtmlFromRaw(decoded || body || '');
-      if (guessHtml) return { text: '', html: guessHtml };
+      if (guessHtml) {return { text: '', html: guessHtml };}
     }
     return { text: isText ? decoded : '', html: isHtml ? decoded : '' };
   }
@@ -49,21 +50,21 @@ function parseEntity(headers, body) {
       // 3) 某些服务会将原始邮件整体放在 text/plain/base64 中，里面再包含 HTML 片段
       if (pct.startsWith('multipart/')) {
         const nested = parseEntity(ph, pb);
-        if (!html && nested.html) html = nested.html;
-        if (!text && nested.text) text = nested.text;
+        if (!html && nested.html) {html = nested.html;}
+        if (!text && nested.text) {text = nested.text;}
       } else if (pct.startsWith('message/rfc822')) {
         const nested = parseEmailBody(pb);
-        if (!html && nested.html) html = nested.html;
-        if (!text && nested.text) text = nested.text;
+        if (!html && nested.html) {html = nested.html;}
+        if (!text && nested.text) {text = nested.text;}
       } else if (pct.includes('rfc822-headers')) {
         // 跳过纯头部，尝试在后续 part 中抓取正文
         continue;
       } else {
         const res = parseEntity(ph, pb);
-        if (!html && res.html) html = res.html;
-        if (!text && res.text) text = res.text;
+        if (!html && res.html) {html = res.html;}
+        if (!text && res.text) {text = res.text;}
       }
-      if (text && html) break;
+      if (text && html) {break;}
     }
   }
 
@@ -72,7 +73,7 @@ function parseEntity(headers, body) {
     // 尝试从各 part 的原始体里猜测 HTML（有些邮件未正确声明 content-type）
     html = guessHtmlFromRaw(body);
     // 如果仍为空，且 text 存在 HTML 痕迹（如标签密集），尝试容错解析
-    if (!html && /<\w+[\s\S]*?>[\s\S]*<\/\w+>/.test(body || '')){
+    if (!html && /<\w+[\s\S]*?>[\s\S]*<\/\w+>/.test(body || '')) {
       html = body;
     }
   }
@@ -92,7 +93,7 @@ function splitHeadersAndBody(input) {
   const idx = input.indexOf('\r\n\r\n');
   const idx2 = idx === -1 ? input.indexOf('\n\n') : idx;
   const sep = idx !== -1 ? 4 : (idx2 !== -1 ? 2 : -1);
-  if (sep === -1) return { headers: {}, body: input };
+  if (sep === -1) {return { headers: {}, body: input };}
   const rawHeaders = input.slice(0, (idx !== -1 ? idx : idx2));
   const body = input.slice((idx !== -1 ? idx : idx2) + sep);
   return { headers: parseHeaders(rawHeaders), body };
@@ -127,7 +128,7 @@ function parseHeaders(rawHeaders) {
  * @returns {string} boundary分隔符，如果没有找到返回空字符串
  */
 function getBoundary(contentType) {
-  if (!contentType) return '';
+  if (!contentType) {return '';}
   // 不改变大小写以保留 boundary 原值；用不区分大小写的匹配
   const m = contentType.match(/boundary\s*=\s*"?([^";\r\n]+)"?/i);
   return m ? m[1].trim() : '';
@@ -151,16 +152,16 @@ function splitMultipart(body, boundary) {
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     if (line.trim() === delim) {
-      if (inPart && current.length) parts.push(current.join('\n'));
+      if (inPart && current.length) {parts.push(current.join('\n'));}
       current = [];
       inPart = true;
       continue;
     }
     if (line.trim() === endDelim) {
-      if (inPart && current.length) parts.push(current.join('\n'));
+      if (inPart && current.length) {parts.push(current.join('\n'));}
       break;
     }
-    if (inPart) current.push(rawLine);
+    if (inPart) {current.push(rawLine);}
   }
   return parts;
 }
@@ -172,20 +173,22 @@ function splitMultipart(body, boundary) {
  * @returns {string} 解码后的正文内容
  */
 function decodeBody(body, transferEncoding) {
-  if (!body) return '';
+  if (!body) {return '';}
   const enc = transferEncoding.trim();
   if (enc === 'base64') {
     const cleaned = body.replace(/\s+/g, '');
     try {
       const bin = atob(cleaned);
       const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      for (let i = 0; i < bin.length; i++) {bytes[i] = bin.charCodeAt(i);}
       try {
         return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-      } catch (_) {
+      } catch (err) {
+        void err;
         return bin;
       }
-    } catch (_) {
+    } catch (err) {
+      void err;
       return body;
     }
   }
@@ -208,14 +211,13 @@ function decodeBodyWithCharset(body, transferEncoding, contentType) {
   // base64/qp 已按 utf-8 解码为字符串；若 charset 指定为 gbk/gb2312 等，尝试再次按该编码解码
   const m = /charset\s*=\s*"?([^";]+)/i.exec(contentType || '');
   const charset = (m && m[1] ? m[1].trim().toLowerCase() : '') || 'utf-8';
-  if (!decodedRaw) return '';
-  if (charset === 'utf-8' || charset === 'utf8' || charset === 'us-ascii') return decodedRaw;
+  if (!decodedRaw) {return '';}
+  if (charset === 'utf-8' || charset === 'utf8' || charset === 'us-ascii') {return decodedRaw;}
   try {
-    // 将字符串转回字节再按指定编码解码；Cloudflare 运行时支持常见编码（utf-8、iso-8859-1）。
-    // 对于 gbk/gb2312 可能不被支持，则直接返回已得到的字符串。
     const bytes = new Uint8Array(decodedRaw.split('').map(c => c.charCodeAt(0)));
     return new TextDecoder(charset, { fatal: false }).decode(bytes);
-  } catch (_) {
+  } catch (err) {
+    void err;
     return decodedRaw;
   }
 }
@@ -226,7 +228,7 @@ function decodeBodyWithCharset(body, transferEncoding, contentType) {
  * @returns {string} 解码后的字符串
  */
 function decodeQuotedPrintable(input) {
-  let s = input.replace(/=\r?\n/g, '');
+  const s = input.replace(/=\r?\n/g, '');
   const bytes = [];
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
@@ -242,7 +244,8 @@ function decodeQuotedPrintable(input) {
   }
   try {
     return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
-  } catch (_) {
+  } catch (err) {
+    void err;
     return s;
   }
 }
@@ -253,13 +256,13 @@ function decodeQuotedPrintable(input) {
  * @returns {string} 提取的HTML内容，如果没有找到返回空字符串
  */
 function guessHtmlFromRaw(raw) {
-  if (!raw) return '';
+  if (!raw) {return '';}
   const lower = raw.toLowerCase();
   let hs = lower.indexOf('<html');
-  if (hs === -1) hs = lower.indexOf('<!doctype html');
+  if (hs === -1) {hs = lower.indexOf('<!doctype html');}
   if (hs !== -1) {
     const he = lower.lastIndexOf('</html>');
-    if (he !== -1) return raw.slice(hs, he + 7);
+    if (he !== -1) {return raw.slice(hs, he + 7);}
   }
   return '';
 }
@@ -269,8 +272,8 @@ function guessHtmlFromRaw(raw) {
  * @param {string} s - 需要转义的字符串
  * @returns {string} 转义后的字符串
  */
-function escapeHtml(s){
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'': '&#39;'}[c] || c));
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'': '&#39;' }[c] || c));
 }
 
 /**
@@ -278,7 +281,7 @@ function escapeHtml(s){
  * @param {string} text - 纯文本内容
  * @returns {string} HTML格式的内容
  */
-function textToHtml(text){
+function textToHtml(text) {
   return `<div style="white-space:pre-wrap">${escapeHtml(text)}</div>`;
 }
 
@@ -287,7 +290,7 @@ function textToHtml(text){
  * @param {string} html - HTML内容
  * @returns {string} 转换后的纯文本内容
  */
-function stripHtml(html){
+function stripHtml(html) {
   const s = String(html || '');
   return s
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -295,7 +298,7 @@ function stripHtml(html){
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&#(\d+);/g, (_, n) => {
-      try{ return String.fromCharCode(parseInt(n, 10)); }catch(_){ return ' '; }
+      try { return String.fromCharCode(parseInt(n, 10)); } catch (err) { void err; return ' '; }
     })
     .replace(/&[a-z]+;/gi, ' ')
     .replace(/\s+/g, ' ')
@@ -311,7 +314,7 @@ function stripHtml(html){
  * @param {string} params.html - HTML内容，默认为空字符串
  * @returns {string} 提取的验证码，如果未找到返回空字符串
  */
-export function extractVerificationCode({ subject = '', text = '', html = '' } = {}){
+export function extractVerificationCode({ subject = '', text = '', html = '' } = {}) {
   const subjectText = String(subject || '');
   const textBody = String(text || '');
   const htmlBody = stripHtml(html);
@@ -326,53 +329,58 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
   const maxLen = 8;
 
   // 将匹配结果中的分隔去掉，仅保留数字并校验长度
-  function normalizeDigits(s){
+  function normalizeDigits(s) {
     const digits = String(s || '').replace(/\D+/g, '');
-    if (digits.length >= minLen && digits.length <= maxLen) return digits;
+    if (digits.length >= minLen && digits.length <= maxLen) {return digits;}
     return '';
   }
 
   // 关键词（多语言，非捕获）
-  const kw = '(?:verification|one[-\s]?time|two[-\s]?factor|2fa|security|auth|login|confirm|code|otp|验证码|校验码|驗證碼|確認碼|認證碼|認証コード|인증코드|코드)';
-  // 代码片段：4-8 位数字，允许以常见分隔符分隔（空格、NBSP、短/长破折号、点号、中点、引号等）
-  const sepClass = "[\\u00A0\\s\-–—_.·•∙‧'’]";
-  const codeChunk = `([0-9](?:${sepClass}?[0-9]){3,7})`;
+  const KW_RE = /(?:verification|one[-\s]?time|two[-\s]?factor|2fa|security|auth|login|confirm|code|otp|验证码|校验码|驗證碼|確認碼|認證碼|認証コード|인증코드|코드)/i;
+  const SEP_CLASS_RE = /[\u00A0\s–—_.·•∙‧'’-]/;
+  const CODE_CHUNK_RE = new RegExp(`([0-9](?:${SEP_CLASS_RE.source}?[0-9]){3,7})`);
 
   // 优先 1：subject 中 关键词 邻近 代码（双向）
+  const NOT_DIGIT_20 = /[^\n\r\d]{0,20}/;
+  const NOT_DIGIT_30 = /[^\n\r\d]{0,30}/;
+  const NOT_DIGIT_80 = /[^\n\r\d]{0,80}/;
+  const LB_NO_DIGIT = /(?<!\d)/;
+  const LA_NO_DIGIT = /(?!\d)/;
+
   const subjectOrdereds = [
-    new RegExp(`${kw}[^\n\r\d]{0,20}(?<!\\d)${codeChunk}(?!\\d)`, 'i'),
-    new RegExp(`(?<!\\d)${codeChunk}(?!\\d)[^\n\r\d]{0,20}${kw}`, 'i'),
+    new RegExp(`${KW_RE.source}${NOT_DIGIT_20.source}${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}`, 'i'),
+    new RegExp(`${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}${NOT_DIGIT_20.source}${KW_RE.source}`, 'i')
   ];
-  for (const r of subjectOrdereds){
+  for (const r of subjectOrdereds) {
     const m = sources.subject.match(r);
-    if (m && m[1]){
+    if (m && m[1]) {
       const n = normalizeDigits(m[1]);
-      if (n) return n;
+      if (n) {return n;}
     }
   }
 
   // 优先 2：正文中 关键词 邻近 代码（双向）
   const bodyOrdereds = [
-    new RegExp(`${kw}[^\n\r\d]{0,30}(?<!\\d)${codeChunk}(?!\\d)`, 'i'),
-    new RegExp(`(?<!\\d)${codeChunk}(?!\\d)[^\n\r\d]{0,30}${kw}`, 'i'),
+    new RegExp(`${KW_RE.source}${NOT_DIGIT_30.source}${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}`, 'i'),
+    new RegExp(`${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}${NOT_DIGIT_30.source}${KW_RE.source}`, 'i')
   ];
-  for (const r of bodyOrdereds){
+  for (const r of bodyOrdereds) {
     const m = sources.body.match(r);
-    if (m && m[1]){
+    if (m && m[1]) {
       const n = normalizeDigits(m[1]);
-      if (n) return n;
+      if (n) {return n;}
     }
   }
 
   // 优先 3：宽松匹配，但需要更明确的验证码上下文（扩展距离范围）
   // 适用于某些验证码邮件中关键词和数字距离较远的情况
   const looseBodyOrdereds = [
-    new RegExp(`${kw}[^\n\r\d]{0,80}(?<!\\d)${codeChunk}(?!\\d)`, 'i'),
-    new RegExp(`(?<!\\d)${codeChunk}(?!\\d)[^\n\r\d]{0,80}${kw}`, 'i'),
+    new RegExp(`${KW_RE.source}${NOT_DIGIT_80.source}${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}`, 'i'),
+    new RegExp(`${LB_NO_DIGIT.source}${CODE_CHUNK_RE.source}${LA_NO_DIGIT.source}${NOT_DIGIT_80.source}${KW_RE.source}`, 'i')
   ];
-  for (const r of looseBodyOrdereds){
+  for (const r of looseBodyOrdereds) {
     const m = sources.body.match(r);
-    if (m && m[1]){
+    if (m && m[1]) {
       const n = normalizeDigits(m[1]);
       // 额外过滤：排除明显的年份（2000-2099）和常见误匹配模式
       if (n && !isLikelyNonVerificationCode(n, sources.body)) {
@@ -393,7 +401,7 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
  * @returns {boolean} 如果可能不是验证码返回true
  */
 function isLikelyNonVerificationCode(digits, context = '') {
-  if (!digits) return true;
+  if (!digits) {return true;}
   
   // 排除年份（2000-2099，常见于邮件日期、活动年份等）
   const year = parseInt(digits, 10);
@@ -421,5 +429,3 @@ function isLikelyNonVerificationCode(digits, context = '') {
   
   return false;
 }
-
-

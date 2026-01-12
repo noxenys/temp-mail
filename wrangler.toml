@@ -1,5 +1,5 @@
 name = "temp-email"
-main = "src/server.js"
+main = "src/worker.js"
 compatibility_date = "2026-01-11"
 
 # 兼容性标志 - 启用 Node.js 兼容性（用于某些 npm 包）
@@ -33,6 +33,7 @@ run_worker_first = true
 # R2 存储桶绑定（用于保存完整 EML 内容，部署时自动创建）
 [[r2_buckets]]
 binding = "MAIL_EML"
+bucket_name = "temp-mail-eml"
 # bucket_name 将在部署时自动创建，无需手动配置
 
 # KV 命名空间绑定（用于缓存和会话管理）

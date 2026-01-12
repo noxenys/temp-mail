@@ -1,4 +1,4 @@
-﻿# Temp-Email 临时邮箱服务（基于 Cloudflare Workers）
+# Temp-Email 临时邮箱服务（基于 Cloudflare Workers）
 
 > 本项目基于 [idinging/freemail](https://github.com/idinging/freemail) 项目的代码进行修改和定制化开发
 
@@ -183,66 +183,133 @@
 - 📈 **监控告警**：Cloudflare Workers Analytics 监控和告警配置
 - 🔄 **CI/CD**：GitHub Actions 自动化测试和部署流水线
 
-## 部署步骤
+## 🚀 部署指南
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/noxenys/temp-email)
+本项目为 Fork 用户提供了两种部署模式，旨在实现“一键部署”。
 
- ### [一键部署指南](docs/yijianbushu.md)
+### 模式 A：自动部署（推荐）
 
-> 提示：如需开启发件功能，还需在 Resend 完成发信域名验证并创建 API Key。
->                                 不会配置？请查看《[Resend 密钥获取与配置教程](docs/resend.md)》。
+此模式利用 Wrangler 的“自动资源配置”功能，在部署时自动创建所需的 D1 数据库和 R2 存储桶。
 
-## 🚀 一键部署（Fork 用户专用）
+**前提条件**:
 
-### 模式 A（推荐，默认显示在前）：Automatic resource provisioning
+*   已安装 [Node.js](https://nodejs.org/) 和 [npm](https://www.npmjs.com/)
+*   已安装 [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (`npm install -g wrangler`)
+*   拥有一个 Cloudflare 账户
 
-- **前置条件**：wrangler >= 4.45.0
-- **说明**：wrangler dev/deploy 会自动创建缺失的 D1/R2 资源；如需关闭自动创建功能，使用 `--no-x-provision` 参数
-  - 示例：`wrangler dev --no-x-provision`（本地开发时关闭自动创建）
-  - 示例：`wrangler deploy --no-x-provision`（部署时关闭自动创建）
-- **步骤（最短可复制）**：
-  1) `npm install`
-  2) `wrangler login`
-  3) （如果需要）配置 secrets：
-     - `wrangler secret put JWT_TOKEN`（设置JWT令牌）
-     - `wrangler secret put MAIL_DOMAIN`（设置邮箱域名）
-     - （可选）`wrangler secret put ADMIN_PASSWORD`（设置管理员密码）
-     - （可选）`wrangler secret put ADMIN_NAME`（设置管理员用户名）
-  4) `wrangler deploy`
-  5) 部署后执行：`npm run d1:execute-basic:remote`
+**部署步骤**:
 
-### 模式 B（可选）：手动创建资源（当你使用 --no-x-provision 关闭自动创建或想自定义资源名）
+1.  **克隆或 Fork 本仓库**
 
-- **说明**：当你使用 `--no-x-provision` 参数关闭自动创建功能时，需要手动创建 D1/R2 资源，并将资源绑定写入 `wrangler.toml` 配置文件（否则绑定不存在）
-- **手动创建步骤**：
-  ```bash
-  # 创建 D1 数据库
-  npm run d1:create
-  # 或使用原始命令：wrangler d1 create temp_email_db
-  
-  # 创建 R2 存储桶
-  wrangler r2 bucket create temp_email_eml
-  ```
-  
-  **重要**：手动创建资源后，需要将生成的资源ID写入 `wrangler.toml` 配置文件中的相应绑定部分，否则部署时会出现绑定错误。
+    ```bash
+    git clone https://github.com/noxenys/temp-email.git
+    cd temp-email
+    ```
 
-### 部署配置
+2.  **安装依赖**
 
-1. **D1数据库配置**
-   - 绑定名：`TEMP_MAIL_DB`
-   - 数据库名：`temp_email_db`
-   - 部署时自动创建，无需手动配置 database_id
-   - **自动资源创建要求**：需要 wrangler >= 4.45.0 版本支持 automatic provisioning 功能，部署时会自动创建 D1 数据库和 R2 存储桶，并将资源 ID 回写到 wrangler.toml 配置文件中
+    ```bash
+    npm install
+    ```
 
-2. **R2存储桶配置**
-   - 绑定名：`MAIL_EML`
-   - 存储桶名：`temp_email_eml`
-   - 用于存储邮件内容和附件
-   - 部署时自动创建，无需手动配置
+3.  **登录 Cloudflare**
 
-3. **环境变量配置**
-   - `JWT_TOKEN`: JWT密钥，用于用户认证
-   - `MAIL_DOMAIN`: 邮箱域名，多个域名用逗号分隔（如：`example.com,test.com`）
+    ```bash
+    wrangler login
+    ```
+
+4.  **配置环境变量**
+
+    在 `wrangler.toml` 文件中，你可以按需修改 `[vars]` 部分的配置，或通过 `wrangler secret put` 命令设置敏感信息。
+
+    **必填项**:
+
+    *   `MAIL_DOMAIN`: 你的邮箱域名，多个域名用逗号分隔。
+    *   `ADMIN_PASSWORD`: 管理员密码。
+    *   `JWT_TOKEN`: 用于 API 认证的令牌。
+
+    **设置示例**:
+
+    ```bash
+    # 设置邮箱域名
+    wrangler secret put MAIL_DOMAIN "your-domain.com"
+
+    # 设置管理员密码
+    wrangler secret put ADMIN_PASSWORD
+    # (然后输入你的密码)
+
+    # 设置 JWT 令牌
+    wrangler secret put JWT_TOKEN
+    # (然后输入你的令牌)
+    ```
+
+5.  **部署到 Cloudflare**
+
+    ```bash
+    wrangler deploy
+    ```
+
+    部署过程中，Wrangler 会自动创建 `wrangler.toml` 中定义的 D1 数据库 (`temp_email_db`) 和 R2 存储桶 (`temp-mail-eml`)。
+
+6.  **初始化数据库**
+
+    首次部署后，需要执行以下命令来初始化数据库表结构：
+
+    ```bash
+    npm run d1:execute-basic:remote
+    ```
+
+7.  **配置邮件路由**
+
+    为了接收邮件，你需要在 Cloudflare 控制台设置邮件路由：
+
+    *   前往你的域名 > **Email** > **Email Routing**。
+    *   在 **Routes** 选项卡下，点击 **Add catch-all**。
+    *   在 **Action** 中选择 **Send to a Worker**。
+    *   在 **Worker** 下拉菜单中，选择你刚刚部署的 Worker (`temp-email`)。
+    *   点击 **Save**。
+
+至此，你的临时邮箱服务已成功部署！
+
+### 模式 B：手动创建资源
+
+如果你希望自定义 D1 和 R2 的名称，或者禁用了自动创建功能 (`--no-provision`)，可以手动创建资源。
+
+1.  **创建 D1 数据库**
+
+    ```bash
+    # 将 <YOUR_DB_NAME> 替换为你的数据库名称
+    wrangler d1 create <YOUR_DB_NAME>
+    ```
+
+    执行后，将返回的 `database_id` 添加到 `wrangler.toml` 的 `[[d1_databases]]` 部分：
+
+    ```toml
+    [[d1_databases]]
+    binding = "TEMP_MAIL_DB"
+    database_name = "<YOUR_DB_NAME>"
+    database_id = "<PASTE_YOUR_ID_HERE>"
+    ```
+
+2.  **创建 R2 存储桶**
+
+    ```bash
+    # 将 <YOUR_BUCKET_NAME> 替换为你的存储桶名称
+    wrangler r2 bucket create <YOUR_BUCKET_NAME>
+    ```
+
+    然后，在 `wrangler.toml` 的 `[[r2_buckets]]` 部分更新 `bucket_name`：
+
+    ```toml
+    [[r2_buckets]]
+    binding = "MAIL_EML"
+    bucket_name = "<YOUR_BUCKET_NAME>"
+    ```
+
+3.  **继续部署**
+
+    完成手动配置后，返回**模式 A** 的第 5 步继续部署。
+
 
 ## 🧪 测试与质量保证
 
@@ -372,8 +439,10 @@ Cloudflare 连接 GitHub 仓库部署
 | MAIL_EML | R2 存储桶绑定，用于保存完整的邮件 EML 文件 | 是 |
 | MAIL_DOMAIN | 用于生成临时邮箱的域名，支持多个，使用逗号或空格分隔（如 `iding.asia, example.com`） | 是 |
 | ADMIN_PASSWORD | 后台访问密码（严格管理员登录） | 是 |
+| GUEST_PASSWORD | 访客登录密码（可选，启用 guest 账号） | 否 |
 | ADMIN_NAME | 严格管理员用户名（默认 `admin`） | 否 |
 | JWT_TOKEN / JWT_SECRET | JWT 签名密钥（二选一，推荐 `JWT_TOKEN`） | 是 |
+| ADMIN_PASS | 与 ADMIN_PASSWORD 等价的别名（可选） | 否 |
 | RESEND_API_KEY / RESEND_TOKEN | Resend 发件配置。支持单密钥、多域名键值对、JSON格式 | 否 |
 | FORWARD_RULES | 邮件转发（转发到指定邮箱）。支持两种格式：`JSON 数组` 或 `逗号分隔 KV` | 否 |
 
@@ -522,7 +591,7 @@ fetch('/api/send', {
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=idinging/freemail&type=Date)](https://www.star-history.com/#idinging/freemail&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=noxenys/temp-email&type=Date)](https://www.star-history.com/#noxenys/temp-email&Date)
 
 ## 联系方式
 
@@ -540,4 +609,4 @@ fetch('/api/send', {
 
 ## 许可证
 
-Apache-2.0 license
+MIT License

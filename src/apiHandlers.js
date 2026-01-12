@@ -1,10 +1,11 @@
+ 
 import { extractEmail, generateRandomId } from './commonUtils.js';
 import { buildMockEmails, buildMockMailboxes, buildMockEmailDetail } from './mockData.js';
 import { getOrCreateMailboxId, getMailboxIdByAddress, recordSentEmail, updateSentEmail, toggleMailboxPin, 
   listUsersWithCounts, createUser, updateUser, deleteUser, assignMailboxToUser, getUserMailboxes, unassignMailboxFromUser, 
   checkMailboxOwnership, getTotalMailboxCount } from './database.js';
 import { parseEmailBody, extractVerificationCode } from './emailParser.js';
-import { sendEmailWithResend, sendBatchWithResend, sendEmailWithAutoResend, sendBatchWithAutoResend, getEmailFromResend, updateEmailInResend, cancelEmailInResend } from './emailSender.js';
+import { sendEmailWithAutoResend, sendBatchWithAutoResend, getEmailFromResend, updateEmailInResend, cancelEmailInResend } from './emailSender.js';
 import logger from './logger.js';
 
 /**
@@ -93,37 +94,37 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  function getJwtPayload(){
+  function getJwtPayload() {
     // 优先使用服务端传入的已解析身份（支持 __root__ 超管）
-    if (options && options.authPayload) return options.authPayload;
-    try{
+    if (options && options.authPayload) {return options.authPayload;}
+    try {
       const cookie = request.headers.get('Cookie') || '';
-      const token = (cookie.split(';').find(s=>s.trim().startsWith('iding-session='))||'').split('=')[1] || '';
+      const token = (cookie.split(';').find(s=>s.trim().startsWith('iding-session=')) || '').split('=')[1] || '';
       const parts = token.split('.');
-      if (parts.length === 3){
+      if (parts.length === 3) {
         const json = atob(parts[1].replace(/-/g,'+').replace(/_/g,'/'));
         return JSON.parse(json);
       }
-    }catch(_){ }
+    } catch (err) { void err; }
     return null;
   }
-  function isStrictAdmin(){
+  function isStrictAdmin() {
     const p = getJwtPayload();
-    if (!p) return false;
-    if (p.role !== 'admin') return false;
+    if (!p) {return false;}
+    if (p.role !== 'admin') {return false;}
     // __root__（根管理员）视为严格管理员
-    if (String(p.username || '') === '__root__') return true;
-    if (options?.adminName){ return String(p.username || '').toLowerCase() === String(options.adminName || '').toLowerCase(); }
+    if (String(p.username || '') === '__root__') {return true;}
+    if (options?.adminName) { return String(p.username || '').toLowerCase() === String(options.adminName || '').toLowerCase(); }
     return true;
   }
   
-  async function sha256Hex(text){
+  async function sha256Hex(text) {
     const enc = new TextEncoder();
     const data = enc.encode(String(text || ''));
     const digest = await crypto.subtle.digest('SHA-256', data);
     const bytes = new Uint8Array(digest);
     let out = '';
-    for (let i = 0; i < bytes.length; i++) out += bytes[i].toString(16).padStart(2, '0');
+    for (let i = 0; i < bytes.length; i++) {out += bytes[i].toString(16).padStart(2, '0');}
     return out;
   }
 
@@ -134,7 +135,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     globalThis.__MOCK_USERS__ = [
       { id: 1, username: 'demo1', role: 'user', can_send: 0, mailbox_limit: 5, created_at: now.toISOString().replace('T',' ').slice(0,19) },
       { id: 2, username: 'demo2', role: 'user', can_send: 0, mailbox_limit: 8, created_at: now.toISOString().replace('T',' ').slice(0,19) },
-      { id: 3, username: 'operator', role: 'admin', can_send: 0, mailbox_limit: 20, created_at: now.toISOString().replace('T',' ').slice(0,19) },
+      { id: 3, username: 'operator', role: 'admin', can_send: 0, mailbox_limit: 20, created_at: now.toISOString().replace('T',' ').slice(0,19) }
     ];
     globalThis.__MOCK_USER_MAILBOXES__ = new Map(); // userId -> [{ address, created_at, is_pinned }]
     // 为每个演示用户预生成若干邮箱，便于列表展示
@@ -147,19 +148,17 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         const boxes = buildMockMailboxes(count, 0, domains);
         globalThis.__MOCK_USER_MAILBOXES__.set(u.id, boxes);
       }
-    } catch (_) {
-      // 忽略演示数据预生成失败
-    }
+    } catch (err) { void err; }
     globalThis.__MOCK_USER_LAST_ID__ = 3;
   }
 
   // =================== 用户管理（演示模式） ===================
-  if (isMock && path === '/api/users' && request.method === 'GET'){
+  if (isMock && path === '/api/users' && request.method === 'GET') {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
     const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
     const sort = url.searchParams.get('sort') || 'desc';
     
-    let list = (globalThis.__MOCK_USERS__ || []).map(u => {
+    const list = (globalThis.__MOCK_USERS__ || []).map(u => {
       const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
       return { ...u, mailbox_count: boxes.length };
     });
@@ -175,78 +174,78 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     const result = list.slice(offset, offset + limit);
     return Response.json(result);
   }
-  if (isMock && path === '/api/users' && request.method === 'POST'){
-    try{
+  if (isMock && path === '/api/users' && request.method === 'POST') {
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim().toLowerCase();
-      if (!username) return new Response('用户名不能为空', { status: 400 });
+      if (!username) {return new Response('用户名不能为空', { status: 400 });}
       const exists = (globalThis.__MOCK_USERS__ || []).some(u => u.username === username);
-      if (exists) return new Response('用户名已存在', { status: 400 });
+      if (exists) {return new Response('用户名已存在', { status: 400 });}
       const role = (body.role === 'admin') ? 'admin' : 'user';
       const mailbox_limit = Math.max(0, Number(body.mailboxLimit || 10));
       const id = ++globalThis.__MOCK_USER_LAST_ID__;
       const item = { id, username, role, can_send: 0, mailbox_limit, created_at: new Date().toISOString().replace('T',' ').slice(0,19) };
       globalThis.__MOCK_USERS__.unshift(item);
       return Response.json(item);
-    }catch(e){ return new Response('创建失败', { status: 500 }); }
+    } catch (err) { void err; return new Response('创建失败', { status: 500 }); }
   }
-  if (isMock && request.method === 'PATCH' && path.startsWith('/api/users/')){
+  if (isMock && request.method === 'PATCH' && path.startsWith('/api/users/')) {
     const id = Number(path.split('/')[3]);
     const list = globalThis.__MOCK_USERS__ || [];
     const idx = list.findIndex(u => u.id === id);
-    if (idx < 0) return new Response('未找到用户', { status: 404 });
-    try{
+    if (idx < 0) {return new Response('未找到用户', { status: 404 });}
+    try {
       const body = await request.json();
-      if (typeof body.mailboxLimit !== 'undefined') list[idx].mailbox_limit = Math.max(0, Number(body.mailboxLimit));
-      if (typeof body.role === 'string') list[idx].role = (body.role === 'admin' ? 'admin' : 'user');
-      if (typeof body.can_send !== 'undefined') list[idx].can_send = body.can_send ? 1 : 0;
+      if (typeof body.mailboxLimit !== 'undefined') {list[idx].mailbox_limit = Math.max(0, Number(body.mailboxLimit));}
+      if (typeof body.role === 'string') {list[idx].role = (body.role === 'admin' ? 'admin' : 'user');}
+      if (typeof body.can_send !== 'undefined') {list[idx].can_send = body.can_send ? 1 : 0;}
       return Response.json({ success: true });
-    }catch(_){ return new Response('更新失败', { status: 500 }); }
+    } catch (err) { void err; return new Response('更新失败', { status: 500 }); }
   }
-  if (isMock && request.method === 'DELETE' && path.startsWith('/api/users/')){
+  if (isMock && request.method === 'DELETE' && path.startsWith('/api/users/')) {
     const id = Number(path.split('/')[3]);
     const list = globalThis.__MOCK_USERS__ || [];
     const idx = list.findIndex(u => u.id === id);
-    if (idx < 0) return new Response('未找到用户', { status: 404 });
+    if (idx < 0) {return new Response('未找到用户', { status: 404 });}
     list.splice(idx, 1);
     globalThis.__MOCK_USER_MAILBOXES__?.delete(id);
     return Response.json({ success: true });
   }
-  if (isMock && path === '/api/users/assign' && request.method === 'POST'){
-    try{
+  if (isMock && path === '/api/users/assign' && request.method === 'POST') {
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim().toLowerCase();
       const address = String(body.address || '').trim().toLowerCase();
       const u = (globalThis.__MOCK_USERS__ || []).find(x => x.username === username);
-      if (!u) return new Response('用户不存在', { status: 404 });
+      if (!u) {return new Response('用户不存在', { status: 404 });}
       const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
-      if (boxes.length >= (u.mailbox_limit || 10)) return new Response('已达到邮箱上限', { status: 400 });
+      if (boxes.length >= (u.mailbox_limit || 10)) {return new Response('已达到邮箱上限', { status: 400 });}
       const item = { address, created_at: new Date().toISOString().replace('T',' ').slice(0,19), is_pinned: 0 };
       boxes.unshift(item);
       globalThis.__MOCK_USER_MAILBOXES__?.set(u.id, boxes);
       return Response.json({ success: true });
-    }catch(_){ return new Response('分配失败', { status: 500 }); }
+    } catch (err) { void err; return new Response('分配失败', { status: 500 }); }
   }
-  if (isMock && path === '/api/users/unassign' && request.method === 'POST'){
-    try{
+  if (isMock && path === '/api/users/unassign' && request.method === 'POST') {
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim().toLowerCase();
       const address = String(body.address || '').trim().toLowerCase();
       const u = (globalThis.__MOCK_USERS__ || []).find(x => x.username === username);
-      if (!u) return new Response('用户不存在', { status: 404 });
+      if (!u) {return new Response('用户不存在', { status: 404 });}
       const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
       const index = boxes.findIndex(box => box.address === address);
-      if (index === -1) return new Response('该邮箱未分配给该用户', { status: 400 });
+      if (index === -1) {return new Response('该邮箱未分配给该用户', { status: 400 });}
       boxes.splice(index, 1);
       globalThis.__MOCK_USER_MAILBOXES__?.set(u.id, boxes);
       return Response.json({ success: true });
-    }catch(_){ return new Response('取消分配失败', { status: 500 }); }
+    } catch (err) { void err; return new Response('取消分配失败', { status: 500 }); }
   }
-  if (isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')){
+  if (isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')) {
     const id = Number(path.split('/')[3]);
     const all = globalThis.__MOCK_USER_MAILBOXES__?.get(id) || [];
     // 随机返回 3-8 个用于展示效果（若数量不足则返回全部）
-    const n = Math.min(all.length, Math.max(3, Math.min(8, Math.floor(Math.random()*6) + 3)));
+    const n = Math.min(all.length, Math.max(3, Math.min(8, Math.floor(Math.random() * 6) + 3)));
     const list = all.slice(0, n);
     return Response.json(list);
   }
@@ -274,9 +273,10 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     
     // 访客模式不写入历史
     if (!isMock) {
+      let userId;
       try {
         const payload = getJwtPayload();
-        const userId = payload?.userId;
+        userId = payload?.userId;
         if (userId) {
           // 用户已登录：检查配额并创建邮箱
           const { getCachedUserQuota } = await import('./cacheHelper.js');
@@ -309,7 +309,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   }
 
   // ================= 用户管理接口（仅非演示模式） =================
-  if (!isMock && path === '/api/users' && request.method === 'GET'){
+  if (!isMock && path === '/api/users' && request.method === 'GET') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'get_users', status: 'forbidden', message: '非严格管理员尝试访问用户列表' });
       return new Response('Forbidden', { status: 403 });
@@ -318,22 +318,22 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
     const sort = url.searchParams.get('sort') || 'desc';
     logger.info({ logId, action: 'get_users', params: { limit, offset, sort } });
-    try{
+    try {
       const users = await listUsersWithCounts(db, { limit, offset, sort });
       logger.info({ logId, action: 'get_users', result: { count: users.length } });
       return Response.json(users);
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'get_users', error: e.message, stack: e.stack });
       return new Response('查询失败', { status: 500 }); 
     }
   }
 
-  if (!isMock && path === '/api/users' && request.method === 'POST'){
+  if (!isMock && path === '/api/users' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'create_user', status: 'forbidden', message: '非严格管理员尝试创建用户' });
       return new Response('Forbidden', { status: 403 });
     }
-    try{
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim();
       const role = (body.role || 'user') === 'admin' ? 'admin' : 'user';
@@ -348,17 +348,17 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.info({ logId, action: 'create_user', params: { username, role, mailboxLimit, hasPassword: !!password } });
       
       let passwordHash = null;
-      if (password){ passwordHash = await sha256Hex(password); }
+      if (password) { passwordHash = await sha256Hex(password); }
       const user = await createUser(db, { username, passwordHash, role, mailboxLimit });
       logger.info({ logId, action: 'create_user', result: { userId: user.id, username: user.username } });
       return Response.json(user);
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'create_user', error: e.message, stack: e.stack });
       return new Response('创建失败: ' + (e?.message || e), { status: 500 }); 
     }
   }
 
-  if (!isMock && request.method === 'PATCH' && path.startsWith('/api/users/')){
+  if (!isMock && request.method === 'PATCH' && path.startsWith('/api/users/')) {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'update_user', status: 'forbidden', message: '非严格管理员尝试更新用户' });
       return new Response('Forbidden', { status: 403 });
@@ -368,26 +368,26 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.warn({ logId, action: 'update_user', status: 'bad_request', message: '无效的用户ID' });
       return new Response('无效ID', { status: 400 });
     }
-    try{
+    try {
       const body = await request.json();
       const fields = {};
-      if (typeof body.mailboxLimit !== 'undefined') fields.mailbox_limit = Math.max(0, Number(body.mailboxLimit));
-      if (typeof body.role === 'string') fields.role = (body.role === 'admin' ? 'admin' : 'user');
-      if (typeof body.can_send !== 'undefined') fields.can_send = body.can_send ? 1 : 0;
-      if (typeof body.password === 'string' && body.password){ fields.password_hash = await sha256Hex(String(body.password)); }
+      if (typeof body.mailboxLimit !== 'undefined') {fields.mailbox_limit = Math.max(0, Number(body.mailboxLimit));}
+      if (typeof body.role === 'string') {fields.role = (body.role === 'admin' ? 'admin' : 'user');}
+      if (typeof body.can_send !== 'undefined') {fields.can_send = body.can_send ? 1 : 0;}
+      if (typeof body.password === 'string' && body.password) { fields.password_hash = await sha256Hex(String(body.password)); }
       
       logger.info({ logId, action: 'update_user', params: { userId: id, fields } });
       
       await updateUser(db, id, fields);
       logger.info({ logId, action: 'update_user', result: { userId: id, success: true } });
       return Response.json({ success: true });
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'update_user', error: e.message, stack: e.stack, userId: id });
       return new Response('更新失败: ' + (e?.message || e), { status: 500 }); 
     }
   }
 
-  if (!isMock && request.method === 'DELETE' && path.startsWith('/api/users/')){
+  if (!isMock && request.method === 'DELETE' && path.startsWith('/api/users/')) {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'delete_user', status: 'forbidden', message: '非严格管理员尝试删除用户' });
       return new Response('Forbidden', { status: 403 });
@@ -398,23 +398,23 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       return new Response('无效ID', { status: 400 });
     }
     logger.info({ logId, action: 'delete_user', params: { userId: id } });
-    try{ 
+    try { 
       await deleteUser(db, id); 
       logger.info({ logId, action: 'delete_user', result: { userId: id, success: true } });
       return Response.json({ success: true });
     }
-    catch(e){ 
+    catch (e) { 
       logger.error({ logId, action: 'delete_user', error: e.message, stack: e.stack, userId: id });
       return new Response('删除失败: ' + (e?.message || e), { status: 500 }); 
     }
   }
 
-  if (!isMock && path === '/api/users/assign' && request.method === 'POST'){
+  if (!isMock && path === '/api/users/assign' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'assign_mailbox', status: 'forbidden', message: '非严格管理员尝试分配邮箱' });
       return new Response('Forbidden', { status: 403 });
     }
-    try{
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim();
       const address = String(body.address || '').trim().toLowerCase();
@@ -426,18 +426,18 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const result = await assignMailboxToUser(db, { username, address });
       logger.info({ logId, action: 'assign_mailbox', result: { username, address, success: true } });
       return Response.json(result);
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'assign_mailbox', error: e.message, stack: e.stack });
       return new Response('分配失败: ' + (e?.message || e), { status: 500 }); 
     }
   }
 
-  if (!isMock && path === '/api/users/unassign' && request.method === 'POST'){
+  if (!isMock && path === '/api/users/unassign' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'unassign_mailbox', status: 'forbidden', message: '非严格管理员尝试取消分配邮箱' });
       return new Response('Forbidden', { status: 403 });
     }
-    try{
+    try {
       const body = await request.json();
       const username = String(body.username || '').trim();
       const address = String(body.address || '').trim().toLowerCase();
@@ -449,35 +449,35 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const result = await unassignMailboxFromUser(db, { username, address });
       logger.info({ logId, action: 'unassign_mailbox', result: { username, address, success: true } });
       return Response.json(result);
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'unassign_mailbox', error: e.message, stack: e.stack });
       return new Response('取消分配失败: ' + (e?.message || e), { status: 500 }); 
     }
   }
 
-  if (!isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')){
+  if (!isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')) {
     const id = Number(path.split('/')[3]);
     if (!id) {
       logger.warn({ logId, action: 'get_user_mailboxes', error: 'invalid_id', userId: id });
       return new Response('无效ID', { status: 400 });
     }
     logger.info({ logId, action: 'get_user_mailboxes', params: { userId: id } });
-    try{ 
+    try { 
       const list = await getUserMailboxes(db, id); 
       logger.info({ logId, action: 'get_user_mailboxes', result: { userId: id, count: list?.length || 0 } });
       return Response.json(list || []); 
     }
-    catch(e){ 
+    catch (e) { 
       logger.error({ logId, action: 'get_user_mailboxes', error: e.message, stack: e.stack, userId: id });
       return new Response('查询失败', { status: 500 }); 
     }
   }
 
   // 自定义创建邮箱：{ local, domainIndex }
-  if (path === '/api/create' && request.method === 'POST'){
-    if (isMock){
+  if (path === '/api/create' && request.method === 'POST') {
+    if (isMock) {
       // demo 模式下使用模拟域名（仅内存，不写库）
-      try{
+      try {
         const body = await request.json();
         const local = String(body.local || '').trim().toLowerCase();
         const valid = /^[a-z0-9._-]{1,64}$/i.test(local);
@@ -493,12 +493,12 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         // 在演示模式中不进行存在性检查，允许用户自由创建
         logger.debug({ logId, action: 'create_custom_mailbox', mode: 'mock', email });
         return Response.json({ email, expires: Date.now() + 3600000 });
-      }catch(e){ 
+      } catch (e) { 
         logger.error({ logId, action: 'create_custom_mailbox', error: e.message, stack: e.stack });
         return new Response('Bad Request', { status: 400 }); 
       }
     }
-    try{
+    try {
       const body = await request.json();
       const local = String(body.local || '').trim().toLowerCase();
       const valid = /^[a-z0-9._-]{1,64}$/i.test(local);
@@ -513,9 +513,10 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       logger.info({ logId, action: 'create_custom_mailbox', params: { local, domainIdx, email } });
       
-      try{
+      let userId;
+      try {
         const payload = getJwtPayload();
-        const userId = payload?.userId;
+        userId = payload?.userId;
         
         // 检查邮箱是否已存在以及权限
         const ownership = await checkMailboxOwnership(db, email, userId);
@@ -548,7 +549,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
           logger.info({ logId, action: 'create_custom_mailbox', result: { email, success: true } });
           return Response.json({ email, expires: Date.now() + 3600000 });
         }
-      }catch(e){ 
+      } catch (e) { 
         // 如果是邮箱上限错误，返回更明确的提示
         if (String(e?.message || '').includes('已达到邮箱上限')) {
           logger.warn({ logId, action: 'create_custom_mailbox', status: 'quota_exceeded', message: '用户达到邮箱上限', userId, error: e.message });
@@ -557,19 +558,19 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         logger.error({ logId, action: 'create_custom_mailbox', error: e.message, stack: e.stack, email });
         return new Response(String(e?.message || '创建失败'), { status: 400 }); 
       }
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'create_custom_mailbox', error: e.message, stack: e.stack });
       return new Response('创建失败', { status: 500 }); 
     }
   }
 
   // 当前用户配额：已用/上限
-  if (path === '/api/user/quota' && request.method === 'GET'){
-    if (isMock){
+  if (path === '/api/user/quota' && request.method === 'GET') {
+    if (isMock) {
       // 演示模式：模拟超级管理员，显示系统邮箱数
       return Response.json({ used: 0, limit: 999999, isAdmin: true });
     }
-    try{
+    try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
       const role = payload?.role || 'user';
@@ -597,20 +598,20 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         logger.info({ logId, action: 'get_user_quota', result: { isAnonymous: true } });
         return Response.json({ used: 0, limit: 0, isAdmin: false });
       }
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'get_user_quota', error: e.message, stack: e.stack });
       return new Response('查询失败', { status: 500 }); 
     }
   }
 
   // 发件记录列表（按发件人地址过滤）
-  if (path === '/api/sent' && request.method === 'GET'){
-    if (isMock){
+  if (path === '/api/sent' && request.method === 'GET') {
+    if (isMock) {
       return Response.json([]);
     }
     const from = url.searchParams.get('from') || url.searchParams.get('mailbox') || '';
-    if (!from){ return new Response('缺少 from 参数', { status: 400 }); }
-    try{
+    if (!from) { return new Response('缺少 from 参数', { status: 400 }); }
+    try {
       // 优化：减少默认查询数量
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 50);
       const { results } = await db.prepare(`
@@ -621,19 +622,19 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         LIMIT ?
       `).bind(String(from).trim().toLowerCase(), limit).all();
       return Response.json(results || []);
-    }catch(e){
-      console.error('查询发件记录失败:', e);
+    } catch (e) {
+      logger.error({ logId, action: 'get_sent_list', error: e.message, stack: e.stack });
       return new Response('查询发件记录失败', { status: 500 });
     }
   }
 
   // 发件记录列表
-  if (path === '/api/user/sent' && request.method === 'GET'){
-    if (isMock){
+  if (path === '/api/user/sent' && request.method === 'GET') {
+    if (isMock) {
       // 演示模式：返回空列表
       return Response.json({ sent: [] });
     }
-    try{
+    try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
       if (!uid) {
@@ -658,16 +659,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       logger.info({ logId, action: 'get_sent_emails', result: { count: sent.results?.length || 0 } });
       return Response.json({ sent: sent.results });
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'get_sent_emails', error: e.message, stack: e.stack });
       return new Response('查询失败', { status: 500 }); 
     }
   }
 
   // 发件详情
-  if (request.method === 'GET' && path.startsWith('/api/sent/')){
+  if (request.method === 'GET' && path.startsWith('/api/sent/')) {
     const sentId = path.substring('/api/sent/'.length);
-    if (isMock){
+    if (isMock) {
       // 演示模式：返回模拟数据
       return Response.json({
         id: sentId,
@@ -678,7 +679,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         created_at: new Date().toISOString()
       });
     }
-    try{
+    try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
       if (!uid) {
@@ -701,7 +702,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       logger.info({ logId, action: 'get_sent_detail', result: { found: true, sentId } });
       return Response.json(sent);
-    }catch(e){ 
+    } catch (e) { 
       logger.error({ logId, action: 'get_sent_detail', error: e.message, stack: e.stack, sentId });
       return new Response('查询失败', { status: 500 }); 
     }
@@ -710,17 +711,17 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   // 检查发件权限的辅助函数
   async function checkSendPermission() {
     const payload = getJwtPayload();
-    if (!payload) return false;
+    if (!payload) {return false;}
     
     // 管理员默认允许
-    if (payload.role === 'admin') return true;
+    if (payload.role === 'admin') {return true;}
     
     // 普通用户检查 can_send 权限（使用缓存）
     if (payload.userId) {
       const { getCachedSystemStat } = await import('./cacheHelper.js');
       const cacheKey = `user_can_send_${payload.userId}`;
       
-      const canSend = await getCachedSystemStat(db, cacheKey, async (db) => {
+      const canSend = await getCachedSystemStat(db, cacheKey, async(db) => {
         const { results } = await db.prepare('SELECT can_send FROM users WHERE id = ?').bind(payload.userId).all();
         return results?.[0]?.can_send ? 1 : 0;
       });
@@ -732,12 +733,13 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   }
   
   // 发送单封邮件
-  if (path === '/api/send' && request.method === 'POST'){
+  if (path === '/api/send' && request.method === 'POST') {
     if (isMock) {
       logger.debug({ logId, action: 'send_email', mode: 'mock' });
       return new Response('演示模式不可发送', { status: 403 });
     }
-    try{
+    let sendPayload;
+    try {
       if (!RESEND_API_KEY) {
         logger.error({ logId, action: 'send_email', error: 'resend_api_key_missing', status: 500 });
         return new Response('未配置 Resend API Key', { status: 500 });
@@ -750,7 +752,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         return new Response('未授权发件或该用户未被授予发件权限', { status: 403 });
       }
       
-      const sendPayload = await request.json();
+      sendPayload = await request.json();
       logger.info({ logId, action: 'send_email', params: { from: sendPayload.from, to: sendPayload.to, subject: sendPayload.subject } });
       
       // 使用智能发送，根据发件人域名自动选择API密钥
@@ -769,19 +771,20 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       logger.info({ logId, action: 'send_email', result: { sendId: result.id, status: 'delivered' } });
       return Response.json({ success: true, id: result.id });
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'send_email', error: e.message, from: sendPayload?.from, to: sendPayload?.to });
       return new Response('发送失败: ' + e.message, { status: 500 });
     }
   }
 
   // 批量发送
-  if (path === '/api/send/batch' && request.method === 'POST'){
+  if (path === '/api/send/batch' && request.method === 'POST') {
     if (isMock) {
       logger.debug({ logId, action: 'send_batch', mode: 'mock' });
       return new Response('演示模式不可发送', { status: 403 });
     }
-    try{
+    let items;
+    try {
       if (!RESEND_API_KEY) {
         logger.error({ logId, action: 'send_batch', error: 'resend_api_key_missing', status: 500 });
         return new Response('未配置 Resend API Key', { status: 500 });
@@ -794,17 +797,17 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         return new Response('未授权发件或该用户未被授予发件权限', { status: 403 });
       }
       
-      const items = await request.json();
+      items = await request.json();
       logger.info({ logId, action: 'send_batch', params: { batchSize: items.length, firstFrom: items[0]?.from, firstTo: items[0]?.to } });
       
       // 使用智能批量发送，自动按域名分组并使用对应的API密钥
       const result = await sendBatchWithAutoResend(RESEND_API_KEY, items);
       
       let recordedCount = 0;
-      try{
+      try {
         // 尝试记录（如果返回结构包含 id 列表）
         const arr = Array.isArray(result) ? result : [];
-        for (let i = 0; i < arr.length; i++){
+        for (let i = 0; i < arr.length; i++) {
           const id = arr[i]?.id;
           const payload = items[i] || {};
           await recordSentEmail(db, {
@@ -820,27 +823,27 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
           });
           recordedCount++;
         }
-      }catch(e){
+      } catch (e) {
         logger.warn({ logId, action: 'send_batch', error: 'record_failed', recordedCount, errorMessage: e.message });
       }
       
       logger.info({ logId, action: 'send_batch', result: { batchSize: items.length, recordedCount, resultSize: Array.isArray(result) ? result.length : 0 } });
       return Response.json({ success: true, result });
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'send_batch', error: e.message, batchSize: items?.length });
       return new Response('批量发送失败: ' + e.message, { status: 500 });
     }
   }
 
   // 查询发送结果
-  if (path.startsWith('/api/send/') && request.method === 'GET'){
+  if (path.startsWith('/api/send/') && request.method === 'GET') {
     if (isMock) {
       logger.debug({ logId, action: 'get_send_result', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可查询真实发送', { status: 403 });
     }
     const id = path.split('/')[3];
     logger.info({ logId, action: 'get_send_result', sendId: id });
-    try{
+    try {
       if (!RESEND_API_KEY) {
         logger.error({ logId, action: 'get_send_result', error: 'resend_api_key_missing', sendId: id, status: 500 });
         return new Response('未配置 Resend API Key', { status: 500 });
@@ -848,21 +851,21 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const data = await getEmailFromResend(RESEND_API_KEY, id);
       logger.info({ logId, action: 'get_send_result', result: { sendId: id, status: data?.status || 'unknown' } });
       return Response.json(data);
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'get_send_result', error: e.message, sendId: id });
       return new Response('查询失败: ' + e.message, { status: 500 });
     }
   }
 
   // 更新（修改定时/状态等）
-  if (path.startsWith('/api/send/') && request.method === 'PATCH'){
+  if (path.startsWith('/api/send/') && request.method === 'PATCH') {
     if (isMock) {
       logger.debug({ logId, action: 'update_send', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可操作', { status: 403 });
     }
     const id = path.split('/')[3];
     logger.info({ logId, action: 'update_send', sendId: id });
-    try{
+    try {
       if (!RESEND_API_KEY) {
         logger.error({ logId, action: 'update_send', error: 'resend_api_key_missing', sendId: id, status: 500 });
         return new Response('未配置 Resend API Key', { status: 500 });
@@ -871,32 +874,32 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.info({ logId, action: 'update_send', params: { sendId: id, updateType: body.status ? 'status' : body.scheduledAt ? 'schedule' : 'unknown' } });
       let data = { ok: true };
       // 如果只是更新本地状态，不必请求 Resend
-      if (body && typeof body.status === 'string'){
+      if (body && typeof body.status === 'string') {
         await updateSentEmail(db, id, { status: body.status });
         logger.info({ logId, action: 'update_send', result: { sendId: id, statusUpdated: true, newStatus: body.status } });
       }
       // 更新定时设置时需要触达 Resend
-      if (body && body.scheduledAt){
+      if (body && body.scheduledAt) {
         data = await updateEmailInResend(RESEND_API_KEY, { id, scheduledAt: body.scheduledAt });
         await updateSentEmail(db, id, { scheduled_at: body.scheduledAt });
         logger.info({ logId, action: 'update_send', result: { sendId: id, scheduleUpdated: true, scheduledAt: body.scheduledAt } });
       }
       return Response.json(data || { ok: true });
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'update_send', error: e.message, sendId: id });
       return new Response('更新失败: ' + e.message, { status: 500 });
     }
   }
 
   // 取消发送
-  if (path.startsWith('/api/send/') && path.endsWith('/cancel') && request.method === 'POST'){
+  if (path.startsWith('/api/send/') && path.endsWith('/cancel') && request.method === 'POST') {
     if (isMock) {
       logger.debug({ logId, action: 'cancel_send', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可操作', { status: 403 });
     }
     const id = path.split('/')[3];
     logger.info({ logId, action: 'cancel_send', sendId: id });
-    try{
+    try {
       if (!RESEND_API_KEY) {
         logger.error({ logId, action: 'cancel_send', error: 'resend_api_key_missing', sendId: id, status: 500 });
         return new Response('未配置 Resend API Key', { status: 500 });
@@ -905,21 +908,21 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       await updateSentEmail(db, id, { status: 'canceled' });
       logger.info({ logId, action: 'cancel_send', result: { sendId: id, canceled: true } });
       return Response.json(data);
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'cancel_send', error: e.message, sendId: id });
       return new Response('取消失败: ' + e.message, { status: 500 });
     }
   }
 
   // 删除发件记录
-  if (request.method === 'DELETE' && path.startsWith('/api/sent/')){
+  if (request.method === 'DELETE' && path.startsWith('/api/sent/')) {
     if (isMock) {
       logger.debug({ logId, action: 'delete_sent_record', mode: 'mock', sentId: path.split('/')[3] });
       return new Response('演示模式不可操作', { status: 403 });
     }
     const id = path.split('/')[3];
     logger.info({ logId, action: 'delete_sent_record', sentId: id });
-    try{
+    try {
       const result = await db.prepare('DELETE FROM sent_emails WHERE id = ?').bind(id).run();
       const deleted = (result?.meta?.changes || 0) > 0;
       if (deleted) {
@@ -928,7 +931,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         logger.warn({ logId, action: 'delete_sent_record', error: 'not_found', sentId: id });
       }
       return Response.json({ success: true, deleted });
-    }catch(e){
+    } catch (e) {
       logger.error({ logId, action: 'delete_sent_record', error: e.message, sentId: id });
       return new Response('删除发件记录失败: ' + e.message, { status: 500 });
     }
@@ -968,7 +971,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       // 优化：减少默认查询数量，降低行读取
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 50);
       
-      try{
+      try {
         const { results } = await db.prepare(`
           SELECT id, sender, subject, received_at, is_read, preview, verification_code
           FROM messages 
@@ -978,7 +981,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         `).bind(mailboxId, ...timeParam, limit).all();
         logger.info({ logId, action: 'get_emails', result: { mailbox: normalized, count: results?.length || 0 } });
         return Response.json(results);
-      }catch(e){
+      } catch (e) {
+        void e;
         // 旧结构降级查询：从 content/html_content 计算 preview
         const { results } = await db.prepare(`
           SELECT id, sender, subject, received_at, is_read,
@@ -1001,19 +1005,19 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   }
 
   // 批量查询邮件详情，减少前端 N+1 请求
-  if (path === '/api/emails/batch' && request.method === 'GET'){
-    try{
+  if (path === '/api/emails/batch' && request.method === 'GET') {
+    try {
       const idsParam = String(url.searchParams.get('ids') || '').trim();
-      if (!idsParam) return Response.json([]);
-      const ids = idsParam.split(',').map(s=>parseInt(s,10)).filter(n=>Number.isInteger(n) && n>0);
-      if (!ids.length) return Response.json([]);
+      if (!idsParam) {return Response.json([]);}
+      const ids = idsParam.split(',').map(s=>parseInt(s,10)).filter(n=>Number.isInteger(n) && n > 0);
+      if (!ids.length) {return Response.json([]);}
       
       // 优化：限制批量查询数量，避免单次查询过多行
       if (ids.length > 50) {
         return new Response('单次最多查询50封邮件', { status: 400 });
       }
       
-      if (isMock){
+      if (isMock) {
         const arr = ids.map(id => buildMockEmailDetail(id));
         return Response.json(arr);
       }
@@ -1028,20 +1032,22 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       }
       
       const placeholders = ids.map(()=>'?').join(',');
-      try{
+      try {
         const { results } = await db.prepare(`
           SELECT id, sender, to_addrs, subject, verification_code, preview, r2_bucket, r2_object_key, received_at, is_read
           FROM messages WHERE id IN (${placeholders})${timeFilter}
         `).bind(...ids, ...timeParam).all();
         return Response.json(results || []);
-      }catch(e){
+      } catch (err) {
+        void err;
         const { results } = await db.prepare(`
           SELECT id, sender, subject, content, html_content, received_at, is_read
-          FROM messages WHERE id IN (${placeholders})${timeFilter}
+                 FROM messages WHERE id IN (${placeholders})${timeFilter}
         `).bind(...ids, ...timeParam).all();
         return Response.json(results || []);
       }
-    }catch(e){
+    } catch (err) {
+      void err;
       return new Response('批量查询失败', { status: 500 });
     }
   }
@@ -1058,16 +1064,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       return Response.json(buildMockMailboxes(limit, offset, mailDomains));
     }
     // 超级管理员（严格管理员）可查看全部；其他仅查看自身绑定
-    try{
-      if (isStrictAdmin()){
+    try {
+      if (isStrictAdmin()) {
         // 严格管理员：查看所有邮箱，并用自己在 user_mailboxes 中的置顶状态覆盖；未置顶则为 0
         const payload = getJwtPayload();
         const adminUid = Number(payload?.userId || 0);
         const like = `%${q.replace(/%/g,'').replace(/_/g,'')}%`;
         
         // 构建筛选条件
-        let whereConditions = [];
-        let bindParams = [adminUid || 0];
+        const whereConditions = [];
+        const bindParams = [adminUid || 0];
         
         // 搜索条件
         if (q) {
@@ -1105,12 +1111,12 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       }
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
-      if (!uid) return Response.json([]);
+      if (!uid) {return Response.json([]);}
       const like = `%${q.replace(/%/g,'').replace(/_/g,'')}%`;
       
       // 构建筛选条件
-      let whereConditions = ['um.user_id = ?'];
-      let bindParams = [uid];
+      const whereConditions = ['um.user_id = ?'];
+      const bindParams = [uid];
       
       // 搜索条件
       if (q) {
@@ -1145,46 +1151,46 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         LIMIT ? OFFSET ?
       `).bind(...bindParams).all();
       return Response.json(results || []);
-    }catch(_){
+    } catch (_) {
       return Response.json([]);
     }
   }
 
   // 重置某个邮箱的密码为默认（邮箱本身）——仅严格管理员
   if (path === '/api/mailboxes/reset-password' && request.method === 'POST') {
-    if (isMock) return Response.json({ success: true, mock: true });
-    try{
-      if (!isStrictAdmin()) return new Response('Forbidden', { status: 403 });
+    if (isMock) {return Response.json({ success: true, mock: true });}
+    try {
+      if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
       const address = String(url.searchParams.get('address') || '').trim().toLowerCase();
-      if (!address) return new Response('缺少 address 参数', { status: 400 });
+      if (!address) {return new Response('缺少 address 参数', { status: 400 });}
       await db.prepare('UPDATE mailboxes SET password_hash = NULL WHERE address = ?').bind(address).run();
       return Response.json({ success: true });
-    }catch(e){ return new Response('重置失败', { status: 500 }); }
+    } catch (err) { void err; return new Response('重置失败', { status: 500 }); }
   }
 
   // 切换邮箱置顶状态
   if (path === '/api/mailboxes/pin' && request.method === 'POST') {
-    if (isMock) return new Response('演示模式不可操作', { status: 403 });
+    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
     const address = url.searchParams.get('address');
-    if (!address) return new Response('缺少 address 参数', { status: 400 });
+    if (!address) {return new Response('缺少 address 参数', { status: 400 });}
     const payload = getJwtPayload();
     let uid = Number(payload?.userId || 0);
     // 兼容旧会话：严格管理员旧 Token 可能没有 userId，这里兜底保障可置顶
-    if (!uid && isStrictAdmin()){
-      try{
+    if (!uid && isStrictAdmin()) {
+      try {
         const { results } = await db.prepare('SELECT id FROM users WHERE username = ?')
           .bind(String(options?.adminName || 'admin').toLowerCase()).all();
-        if (results && results.length){
+        if (results && results.length) {
           uid = Number(results[0].id);
         } else {
           const uname = String(options?.adminName || 'admin').toLowerCase();
-          await db.prepare("INSERT INTO users (username, role, can_send, mailbox_limit) VALUES (?, 'admin', 1, 9999)").bind(uname).run();
+          await db.prepare('INSERT INTO users (username, role, can_send, mailbox_limit) VALUES (?, \'admin\', 1, 9999)').bind(uname).run();
           const again = await db.prepare('SELECT id FROM users WHERE username = ?').bind(uname).all();
           uid = Number(again?.results?.[0]?.id || 0);
         }
-      }catch(_){ uid = 0; }
+      } catch (err) { void err; uid = 0; }
     }
-    if (!uid) return new Response('未登录', { status: 401 });
+    if (!uid) {return new Response('未登录', { status: 401 });}
     try {
       const result = await toggleMailboxPin(db, address, uid);
       return Response.json({ success: true, ...result });
@@ -1195,14 +1201,14 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 切换邮箱登录权限（仅严格管理员可用）
   if (path === '/api/mailboxes/toggle-login' && request.method === 'POST') {
-    if (isMock) return new Response('演示模式不可操作', { status: 403 });
-    if (!isStrictAdmin()) return new Response('Forbidden', { status: 403 });
+    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
+    if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
       const address = String(body.address || '').trim().toLowerCase();
       const canLogin = Boolean(body.can_login);
       
-      if (!address) return new Response('缺少 address 参数', { status: 400 });
+      if (!address) {return new Response('缺少 address 参数', { status: 400 });}
       
       // 检查邮箱是否存在
       const mbRes = await db.prepare('SELECT id FROM mailboxes WHERE address = ?').bind(address).all();
@@ -1222,15 +1228,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 修改邮箱密码（仅严格管理员可用）
   if (path === '/api/mailboxes/change-password' && request.method === 'POST') {
-    if (isMock) return new Response('演示模式不可操作', { status: 403 });
-    if (!isStrictAdmin()) return new Response('Forbidden', { status: 403 });
+    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
+    if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
       const address = String(body.address || '').trim().toLowerCase();
       const newPassword = String(body.new_password || '').trim();
       
-      if (!address) return new Response('缺少 address 参数', { status: 400 });
-      if (!newPassword || newPassword.length < 6) return new Response('密码长度至少6位', { status: 400 });
+      if (!address) {return new Response('缺少 address 参数', { status: 400 });}
+      if (!newPassword || newPassword.length < 6) {return new Response('密码长度至少6位', { status: 400 });}
       
       // 检查邮箱是否存在
       const mbRes = await db.prepare('SELECT id FROM mailboxes WHERE address = ?').bind(address).all();
@@ -1253,8 +1259,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 批量切换邮箱登录权限（仅严格管理员可用）
   if (path === '/api/mailboxes/batch-toggle-login' && request.method === 'POST') {
-    if (isMock) return new Response('演示模式不可操作', { status: 403 });
-    if (!isStrictAdmin()) return new Response('Forbidden', { status: 403 });
+    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
+    if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
       const addresses = body.addresses || [];
@@ -1287,7 +1293,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       }
       
       // 优化：使用 IN 查询批量检查邮箱是否存在，减少数据库查询次数
-      let existingMailboxes = new Set();
+      const existingMailboxes = new Set();
       if (addressMap.size > 0) {
         try {
           const addressList = Array.from(addressMap.keys());
@@ -1300,14 +1306,14 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
             existingMailboxes.add(row.address);
           }
         } catch (e) {
-          console.error('批量检查邮箱失败:', e);
+          logger.error({ logId, action: 'batch_check_mailboxes_failed', error: e.message, stack: e.stack });
         }
       }
       
       // 准备批量操作语句
       const batchStatements = [];
       
-      for (const [normalizedAddress, originalAddress] of addressMap.entries()) {
+      for (const normalizedAddress of addressMap.keys()) {
         if (existingMailboxes.has(normalizedAddress)) {
           // 邮箱存在，更新登录权限
           batchStatements.push({
@@ -1354,7 +1360,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
             }
           }
         } catch (e) {
-          console.error('批量操作执行失败:', e);
+          logger.error({ logId, action: 'batch_execute_failed', error: e.message, stack: e.stack });
           return new Response('批量操作失败: ' + e.message, { status: 500 });
         }
       }
@@ -1373,9 +1379,9 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 删除邮箱（及其所有邮件）
   if (path === '/api/mailboxes' && request.method === 'DELETE') {
-    if (isMock) return new Response('演示模式不可删除', { status: 403 });
+    if (isMock) {return new Response('演示模式不可删除', { status: 403 });}
     const raw = url.searchParams.get('address');
-    if (!raw) return new Response('缺少 address 参数', { status: 400 });
+    if (!raw) {return new Response('缺少 address 参数', { status: 400 });}
     const normalized = String(raw || '').trim().toLowerCase();
     try {
       const { invalidateMailboxCache } = await import('./cacheHelper.js');
@@ -1383,32 +1389,32 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const mailboxId = await getMailboxIdByAddress(db, normalized);
       // 未找到则明确返回 404，避免前端误判为成功
       if (!mailboxId) {
-        logger.warn(`邮箱删除失败: 邮箱不存在`, { logId, action: 'delete_mailbox', address: normalized, status: 404 });
+        logger.warn('邮箱删除失败: 邮箱不存在', { logId, action: 'delete_mailbox', address: normalized, status: 404 });
         return new Response(JSON.stringify({ success: false, message: '邮箱不存在' }), { status: 404 });
       }
       
-      if (!isStrictAdmin()){
+      if (!isStrictAdmin()) {
         // 二级管理员（数据库中的 admin 角色）仅能删除自己绑定的邮箱
         const payload = getJwtPayload();
         if (!payload || payload.role !== 'admin' || !payload.userId) {
-          logger.warn(`邮箱删除失败: 权限不足`, { logId, action: 'delete_mailbox', address: normalized, status: 403 });
+          logger.warn('邮箱删除失败: 权限不足', { logId, action: 'delete_mailbox', address: normalized, status: 403 });
           return new Response('Forbidden', { status: 403 });
         }
         const own = await db.prepare('SELECT 1 FROM user_mailboxes WHERE user_id = ? AND mailbox_id = ? LIMIT 1')
           .bind(Number(payload.userId), mailboxId).all();
         if (!own?.results?.length) {
-          logger.warn(`邮箱删除失败: 无权删除他人邮箱`, { logId, action: 'delete_mailbox', address: normalized, mailboxId, userId: payload.userId, status: 403 });
+          logger.warn('邮箱删除失败: 无权删除他人邮箱', { logId, action: 'delete_mailbox', address: normalized, mailboxId, userId: payload.userId, status: 403 });
           return new Response('Forbidden', { status: 403 });
         }
       }
       
-      logger.info(`开始删除邮箱`, { logId, action: 'delete_mailbox', address: normalized, mailboxId });
+      logger.info('开始删除邮箱', { logId, action: 'delete_mailbox', address: normalized, mailboxId });
       
       // 简易事务，降低并发插入导致的外键失败概率
-      try { await db.exec('BEGIN'); } catch(_) {}
+      try { await db.exec('BEGIN'); } catch (err) { void err; }
       await db.prepare('DELETE FROM messages WHERE mailbox_id = ?').bind(mailboxId).run();
       const deleteResult = await db.prepare('DELETE FROM mailboxes WHERE id = ?').bind(mailboxId).run();
-      try { await db.exec('COMMIT'); } catch(_) {}
+      try { await db.exec('COMMIT'); } catch (err) { void err; }
 
       // 优化：通过 meta.changes 判断删除是否成功，减少 COUNT 查询
       const deleted = (deleteResult?.meta?.changes || 0) > 0;
@@ -1419,52 +1425,52 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         // 使系统统计缓存失效
         const { invalidateSystemStatCache } = await import('./cacheHelper.js');
         invalidateSystemStatCache('total_mailboxes');
-        logger.info(`邮箱删除成功`, { logId, action: 'delete_mailbox', address: normalized, mailboxId, deleted: true });
+        logger.info('邮箱删除成功', { logId, action: 'delete_mailbox', address: normalized, mailboxId, deleted: true });
       } else {
-        logger.warn(`邮箱删除失败: 数据库操作未生效`, { logId, action: 'delete_mailbox', address: normalized, mailboxId });
+        logger.warn('邮箱删除失败: 数据库操作未生效', { logId, action: 'delete_mailbox', address: normalized, mailboxId });
       }
       
       return Response.json({ success: deleted, deleted });
     } catch (e) {
-      try { await db.exec('ROLLBACK'); } catch(_) {}
-      logger.error(`邮箱删除异常`, { logId, action: 'delete_mailbox', address: normalized, error: e.message });
+      try { await db.exec('ROLLBACK'); } catch (err) { void err; }
+      logger.error('邮箱删除异常', { logId, action: 'delete_mailbox', address: normalized, error: e.message });
       return new Response('删除失败', { status: 500 });
     }
   }
 
   // 下载 EML（从 R2 获取）- 必须在通用邮件详情处理器之前
-  if (request.method === 'GET' && path.startsWith('/api/email/') && path.endsWith('/download')){
-    if (options.mockOnly) return new Response('演示模式不可下载', { status: 403 });
+  if (request.method === 'GET' && path.startsWith('/api/email/') && path.endsWith('/download')) {
+    if (options.mockOnly) {return new Response('演示模式不可下载', { status: 403 });}
     const id = path.split('/')[3];
     const { results } = await db.prepare('SELECT r2_bucket, r2_object_key FROM messages WHERE id = ?').bind(id).all();
-    const row = (results||[])[0];
+    const row = (results || [])[0];
     if (!row || !row.r2_object_key) {
-      logger.warn(`邮件下载失败: 未找到邮件或对象`, { logId, action: 'download_email', emailId: id, status: 404 });
+      logger.warn('邮件下载失败: 未找到邮件或对象', { logId, action: 'download_email', emailId: id, status: 404 });
       return new Response('未找到对象', { status: 404 });
     }
     
-    logger.info(`开始下载邮件`, { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key });
+    logger.info('开始下载邮件', { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key });
     
-    try{
+    try {
       const r2 = options.r2;
       if (!r2) {
-        logger.error(`邮件下载失败: R2未绑定`, { logId, action: 'download_email', emailId: id, status: 500 });
+        logger.error('邮件下载失败: R2未绑定', { logId, action: 'download_email', emailId: id, status: 500 });
         return new Response('R2 未绑定', { status: 500 });
       }
       
       const obj = await r2.get(row.r2_object_key);
       if (!obj) {
-        logger.warn(`邮件下载失败: 对象不存在`, { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key, status: 404 });
+        logger.warn('邮件下载失败: 对象不存在', { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key, status: 404 });
         return new Response('对象不存在', { status: 404 });
       }
       
       const headers = new Headers({ 'Content-Type': 'message/rfc822' });
       headers.set('Content-Disposition', `attachment; filename="${String(row.r2_object_key).split('/').pop()}"`);
       
-      logger.info(`邮件下载成功`, { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key, size: obj.size });
+      logger.info('邮件下载成功', { logId, action: 'download_email', emailId: id, objectKey: row.r2_object_key, size: obj.size });
       return new Response(obj.body, { headers });
-    }catch(e){
-      logger.error(`邮件下载异常`, { logId, action: 'download_email', emailId: id, error: e.message });
+    } catch (e) {
+      logger.error('邮件下载异常', { logId, action: 'download_email', emailId: id, error: e.message });
       return new Response('下载失败', { status: 500 });
     }
   }
@@ -1478,7 +1484,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     
     logger.info({ logId, action: 'get_email_detail', params: { emailId, isMailboxOnly } });
     
-    try{
+    try {
       // 邮箱用户需要验证邮件是否在24小时内
       let timeFilter = '';
       let timeParam = [];
@@ -1504,7 +1510,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       let html_content = row.html_content || '';
       
       if (row.r2_object_key) {
-        try{
+        try {
           const r2 = options.r2;
           if (r2) {
             const obj = await r2.get(row.r2_object_key);
@@ -1517,23 +1523,24 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
               // 如果 R2 中有内容，更新数据库中的预览
               if (content && !row.preview) {
                 const preview = String(content).substring(0, 120);
-                await db.prepare(`UPDATE messages SET preview = ? WHERE id = ?`).bind(preview, emailId).run();
+                await db.prepare('UPDATE messages SET preview = ? WHERE id = ?').bind(preview, emailId).run();
               }
             }
           }
-        }catch(e){
+        } catch (e) {
           // R2 读取失败时使用数据库中的内容
           logger.warn({ logId, action: 'get_email_detail', error: 'r2_read_failed', emailId, r2Key: row.r2_object_key, errorMessage: e.message });
         }
       }
       
       // 标记为已读
-      await db.prepare(`UPDATE messages SET is_read = 1 WHERE id = ?`).bind(emailId).run();
+      await db.prepare('UPDATE messages SET is_read = 1 WHERE id = ?').bind(emailId).run();
       
       logger.info({ logId, action: 'get_email_detail', result: { emailId, found: true, hasR2: !!row.r2_object_key } });
       
       return Response.json({ ...row, content, html_content, download: row.r2_object_key ? `/api/email/${emailId}/download` : '' });
-    }catch(e){
+    } catch (e) {
+      void e;
       const { results } = await db.prepare(`
         SELECT id, sender, subject, content, html_content, received_at, is_read
         FROM messages WHERE id = ?
@@ -1542,34 +1549,34 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         logger.warn({ logId, action: 'get_email_detail', error: 'not_found_fallback', emailId, status: 404 });
         return new Response('未找到邮件', { status: 404 });
       }
-      await db.prepare(`UPDATE messages SET is_read = 1 WHERE id = ?`).bind(emailId).run();
+      await db.prepare('UPDATE messages SET is_read = 1 WHERE id = ?').bind(emailId).run();
       logger.info({ logId, action: 'get_email_detail', result: { emailId, found: true, fallback: true } });
       return Response.json(results[0]);
     }
   }
 
   if (request.method === 'DELETE' && path.startsWith('/api/email/')) {
-    if (isMock) return new Response('演示模式不可删除', { status: 403 });
+    if (isMock) {return new Response('演示模式不可删除', { status: 403 });}
     const emailId = path.split('/')[3];
     
     if (!emailId || !Number.isInteger(parseInt(emailId))) {
-      logger.warn(`邮件删除失败: 无效的邮件ID`, { logId, action: 'delete_email', emailId, status: 400 });
+      logger.warn('邮件删除失败: 无效的邮件ID', { logId, action: 'delete_email', emailId, status: 400 });
       return new Response('无效的邮件ID', { status: 400 });
     }
     
-    logger.info(`开始删除邮件`, { logId, action: 'delete_email', emailId });
+    logger.info('开始删除邮件', { logId, action: 'delete_email', emailId });
     
     try {
       // 优化：直接删除，通过 D1 的 changes 判断是否成功，减少 COUNT 查询
-      const result = await db.prepare(`DELETE FROM messages WHERE id = ?`).bind(emailId).run();
+      const result = await db.prepare('DELETE FROM messages WHERE id = ?').bind(emailId).run();
       
       // D1 的 run() 返回对象中包含 meta.changes 表示受影响的行数
       const deleted = (result?.meta?.changes || 0) > 0;
       
       if (deleted) {
-        logger.info(`邮件删除成功`, { logId, action: 'delete_email', emailId, deleted: true });
+        logger.info('邮件删除成功', { logId, action: 'delete_email', emailId, deleted: true });
       } else {
-        logger.warn(`邮件删除失败: 邮件不存在或已被删除`, { logId, action: 'delete_email', emailId });
+        logger.warn('邮件删除失败: 邮件不存在或已被删除', { logId, action: 'delete_email', emailId });
       }
       
       return Response.json({ 
@@ -1578,61 +1585,61 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         message: deleted ? '邮件已删除' : '邮件不存在或已被删除'
       });
     } catch (e) {
-      logger.error(`邮件删除异常`, { logId, action: 'delete_email', emailId, error: e.message });
+      logger.error('邮件删除异常', { logId, action: 'delete_email', emailId, error: e.message });
       return new Response('删除邮件时发生错误: ' + e.message, { status: 500 });
     }
   }
 
   if (request.method === 'DELETE' && path === '/api/emails') {
-    if (isMock) return new Response('演示模式不可清空', { status: 403 });
+    if (isMock) {return new Response('演示模式不可清空', { status: 403 });}
     const mailbox = url.searchParams.get('mailbox');
     if (!mailbox) {
-      logger.warn(`清空邮件失败: 缺少mailbox参数`, { logId, action: 'clear_emails', status: 400 });
+      logger.warn('清空邮件失败: 缺少mailbox参数', { logId, action: 'clear_emails', status: 400 });
       return new Response('缺少 mailbox 参数', { status: 400 });
     }
     
     const normalized = extractEmail(mailbox).trim().toLowerCase();
-    logger.info(`开始清空邮件`, { logId, action: 'clear_emails', mailbox: normalized });
+    logger.info('开始清空邮件', { logId, action: 'clear_emails', mailbox: normalized });
     
     try {
       // 仅当邮箱已存在时才执行清空操作；不存在则直接返回 0 删除
       const mailboxId = await getMailboxIdByAddress(db, normalized);
       if (!mailboxId) {
-        logger.info(`清空邮件: 邮箱不存在，无需清空`, { logId, action: 'clear_emails', mailbox: normalized });
+        logger.info('清空邮件: 邮箱不存在，无需清空', { logId, action: 'clear_emails', mailbox: normalized });
         return Response.json({ success: true, deletedCount: 0 });
       }
       
       // 优化：直接删除，通过 meta.changes 获取删除数量，减少 COUNT 查询
-      const result = await db.prepare(`DELETE FROM messages WHERE mailbox_id = ?`).bind(mailboxId).run();
+      const result = await db.prepare('DELETE FROM messages WHERE mailbox_id = ?').bind(mailboxId).run();
       const deletedCount = result?.meta?.changes || 0;
       
-      logger.info(`清空邮件成功`, { logId, action: 'clear_emails', mailbox: normalized, mailboxId, deletedCount });
+      logger.info('清空邮件成功', { logId, action: 'clear_emails', mailbox: normalized, mailboxId, deletedCount });
       
       return Response.json({ 
         success: true, 
         deletedCount
       });
     } catch (e) {
-      logger.error(`清空邮件异常`, { logId, action: 'clear_emails', mailbox: normalized, error: e.message });
+      logger.error('清空邮件异常', { logId, action: 'clear_emails', mailbox: normalized, error: e.message });
       return new Response('清空邮件失败', { status: 500 });
     }
   }
 
   // ================= 邮箱密码管理 =================
   if (path === '/api/mailbox/password' && request.method === 'PUT') {
-    if (isMock) return new Response('演示模式不可修改密码', { status: 403 });
+    if (isMock) {return new Response('演示模式不可修改密码', { status: 403 });}
     
     try {
       const body = await request.json();
       const { currentPassword, newPassword } = body;
       
       if (!currentPassword || !newPassword) {
-        logger.warn(`密码修改失败: 密码参数为空`, { logId, action: 'change_password', status: 400 });
+        logger.warn('密码修改失败: 密码参数为空', { logId, action: 'change_password', status: 400 });
         return new Response('当前密码和新密码不能为空', { status: 400 });
       }
       
       if (newPassword.length < 6) {
-        logger.warn(`密码修改失败: 新密码长度不足`, { logId, action: 'change_password', passwordLength: newPassword.length, status: 400 });
+        logger.warn('密码修改失败: 新密码长度不足', { logId, action: 'change_password', passwordLength: newPassword.length, status: 400 });
         return new Response('新密码长度至少6位', { status: 400 });
       }
       
@@ -1641,18 +1648,18 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const mailboxId = payload?.mailboxId;
       
       if (!mailboxAddress || !mailboxId) {
-        logger.warn(`密码修改失败: 未找到邮箱信息`, { logId, action: 'change_password', status: 401 });
+        logger.warn('密码修改失败: 未找到邮箱信息', { logId, action: 'change_password', status: 401 });
         return new Response('未找到邮箱信息', { status: 401 });
       }
       
-      logger.info(`开始修改密码`, { logId, action: 'change_password', mailboxAddress, mailboxId });
+      logger.info('开始修改密码', { logId, action: 'change_password', mailboxAddress, mailboxId });
       
       // 验证当前密码
       const { results } = await db.prepare('SELECT password_hash FROM mailboxes WHERE id = ? AND address = ?')
         .bind(mailboxId, mailboxAddress).all();
       
       if (!results || results.length === 0) {
-        logger.warn(`密码修改失败: 邮箱不存在`, { logId, action: 'change_password', mailboxAddress, mailboxId, status: 404 });
+        logger.warn('密码修改失败: 邮箱不存在', { logId, action: 'change_password', mailboxAddress, mailboxId, status: 404 });
         return new Response('邮箱不存在', { status: 404 });
       }
       
@@ -1669,7 +1676,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       }
       
       if (!currentPasswordValid) {
-        logger.warn(`密码修改失败: 当前密码错误`, { logId, action: 'change_password', mailboxAddress, mailboxId, status: 400 });
+        logger.warn('密码修改失败: 当前密码错误', { logId, action: 'change_password', mailboxAddress, mailboxId, status: 400 });
         return new Response('当前密码错误', { status: 400 });
       }
       
@@ -1681,12 +1688,12 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       await db.prepare('UPDATE mailboxes SET password_hash = ? WHERE id = ?')
         .bind(newPasswordHash, mailboxId).run();
       
-      logger.info(`密码修改成功`, { logId, action: 'change_password', mailboxAddress, mailboxId });
+      logger.info('密码修改成功', { logId, action: 'change_password', mailboxAddress, mailboxId });
       
       return Response.json({ success: true, message: '密码修改成功' });
       
     } catch (error) {
-      logger.error(`密码修改异常`, { logId, action: 'change_password', error: error.message });
+      logger.error('密码修改异常', { logId, action: 'change_password', error: error.message });
       return new Response('修改密码失败', { status: 500 });
     }
   }
@@ -1764,14 +1771,14 @@ export async function handleEmailReceive(request, db, env) {
         objectKey = `${y}/${m}/${d}/${safeMailbox}/${hh}${mm}${ss}-${keyId}.eml`;
         await r2.put(objectKey, eml, { httpMetadata: { contentType: 'message/rfc822' } });
       }
-    } catch (_) { objectKey = ''; }
+    } catch (err) { void err; objectKey = ''; }
 
     const previewBase = (text || html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
     const preview = String(previewBase || '').slice(0, 120);
     let verificationCode = '';
     try {
       verificationCode = extractVerificationCode({ subject, text, html });
-    } catch (_) {}
+    } catch (err) { void err; }
 
     // 直接使用标准列名插入（表结构已在初始化时固定）
     await db.prepare(`
@@ -1790,7 +1797,7 @@ export async function handleEmailReceive(request, db, env) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('处理邮件时出错:', error);
+    logger.error('处理邮件时出错', error);
     return new Response('处理邮件失败', { status: 500 });
   }
 }

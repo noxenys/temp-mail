@@ -1,6 +1,7 @@
+ 
 import { handleApiRequest, handleEmailReceive } from './apiHandlers.js';
 import { createJwt, verifyJwt, buildSessionCookie, verifyMailboxLogin } from './authentication.js';
-import { extractEmail } from './commonUtils.js';
+ 
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
 import logger from './logger.js';
 
@@ -125,7 +126,9 @@ export class Router {
           // 执行中间件
           for (const middleware of this.middlewares) {
             const result = await middleware(enhancedContext);
-            if (result) return result; // 如果中间件返回响应，直接返回
+            if (result) {
+              return result; // 如果中间件返回响应，直接返回
+            }
           }
 
           // 执行路由处理函数
@@ -163,11 +166,14 @@ async function sha256Hex(text) {
  * @returns {Promise<boolean>} 验证结果，true表示密码匹配
  */
 async function verifyPassword(rawPassword, hashed) {
-  if (!hashed) return false;
+  if (!hashed) {
+    return false;
+  }
   try {
     const hex = (await sha256Hex(rawPassword)).toLowerCase();
     return hex === String(hashed || '').toLowerCase();
-  } catch (_) {
+  } catch (err) {
+    void err;
     return false;
   }
 }
@@ -213,7 +219,7 @@ export async function authMiddleware(context) {
  */
 async function verifyJwtWithCache(JWT_TOKEN, cookieHeader) {
   const token = (cookieHeader.split(';').find(s => s.trim().startsWith('iding-session=')) || '').split('=')[1] || '';
-  if (!globalThis.__JWT_CACHE__) globalThis.__JWT_CACHE__ = new Map();
+  if (!globalThis.__JWT_CACHE__) {globalThis.__JWT_CACHE__ = new Map();}
 
   // 清理过期缓存项
   const now = Date.now();
@@ -252,20 +258,29 @@ async function verifyJwtWithCache(JWT_TOKEN, cookieHeader) {
  */
 function checkRootAdminOverride(request, JWT_TOKEN) {
   try {
-    if (!JWT_TOKEN) return null;
+    if (!JWT_TOKEN) {
+      return null;
+    }
     const auth = request.headers.get('Authorization') || request.headers.get('authorization') || '';
     const xToken = request.headers.get('X-Admin-Token') || request.headers.get('x-admin-token') || '';
     let urlToken = '';
     try {
       const u = new URL(request.url);
       urlToken = u.searchParams.get('admin_token') || '';
-    } catch (_) { }
+    } catch (err) { void err; }
     const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-    if (bearer && bearer === JWT_TOKEN) return { role: 'admin', username: '__root__', userId: 0 };
-    if (xToken && xToken === JWT_TOKEN) return { role: 'admin', username: '__root__', userId: 0 };
-    if (urlToken && urlToken === JWT_TOKEN) return { role: 'admin', username: '__root__', userId: 0 };
+    if (bearer && bearer === JWT_TOKEN) {
+      return { role: 'admin', username: '__root__', userId: 0 };
+    }
+    if (xToken && xToken === JWT_TOKEN) {
+      return { role: 'admin', username: '__root__', userId: 0 };
+    }
+    if (urlToken && urlToken === JWT_TOKEN) {
+      return { role: 'admin', username: '__root__', userId: 0 };
+    }
     return null;
-  } catch (_) {
+  } catch (err) {
+    void err;
     return null;
   }
 }
@@ -278,7 +293,9 @@ function checkRootAdminOverride(request, JWT_TOKEN) {
  */
 export async function resolveAuthPayload(request, JWT_TOKEN) {
   const root = checkRootAdminOverride(request, JWT_TOKEN);
-  if (root) return root;
+  if (root) {
+    return root;
+  }
   return await verifyJwtWithCache(JWT_TOKEN, request.headers.get('Cookie') || '');
 }
 
@@ -290,7 +307,7 @@ export function createRouter() {
   const router = new Router();
 
   // =================== 认证相关路由 ===================
-  router.post('/api/login', async (context) => {
+  router.post('/api/login', async(context) => {
     const { request, env } = context;
     const logId = `login-${Date.now()}`;
     
@@ -330,11 +347,12 @@ export function createRouter() {
           if (u?.results?.length) {
             adminUserId = Number(u.results[0].id);
           } else {
-            await DB.prepare("INSERT INTO users (username, role, can_send, mailbox_limit) VALUES (?, 'admin', 1, 9999)").bind(ADMIN_NAME).run();
+            await DB.prepare('INSERT INTO users (username, role, can_send, mailbox_limit) VALUES (?, \'admin\', 1, 9999)').bind(ADMIN_NAME).run();
             const again = await DB.prepare('SELECT id FROM users WHERE username = ?').bind(ADMIN_NAME).all();
             adminUserId = Number(again?.results?.[0]?.id || 0);
           }
-        } catch (_) {
+        } catch (err) {
+          void err;
           adminUserId = 0;
         }
 
@@ -434,7 +452,7 @@ export function createRouter() {
     }
   });
 
-  router.post('/api/logout', async (context) => {
+  router.post('/api/logout', async(context) => {
     const { request, authPayload } = context;
     const logId = `logout-${Date.now()}`;
     
@@ -447,7 +465,8 @@ export function createRouter() {
       const isHttps = (u.protocol === 'https:');
       const secureFlag = isHttps ? ' Secure;' : '';
       headers.set('Set-Cookie', `iding-session=; HttpOnly;${secureFlag} Path=/; SameSite=Strict; Max-Age=0`);
-    } catch (_) {
+    } catch (err) {
+      void err;
       headers.set('Set-Cookie', 'iding-session=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0');
     }
     
@@ -455,8 +474,8 @@ export function createRouter() {
     return new Response(JSON.stringify({ success: true }), { headers });
   });
 
-  router.get('/api/session', async (context) => {
-    const { request, env, authPayload } = context;
+  router.get('/api/session', async(context) => {
+    const { env, authPayload } = context;
     const logId = `session-${Date.now()}`;
     const ADMIN_NAME = String(env.ADMIN_NAME || 'admin').trim().toLowerCase();
     
@@ -483,29 +502,29 @@ export function createRouter() {
   });
 
   // =================== API路由委托 ===================
-  router.get('/api/*', async (context) => {
+  router.get('/api/*', async(context) => {
     return await delegateApiRequest(context);
   });
 
-  router.post('/api/*', async (context) => {
+  router.post('/api/*', async(context) => {
     return await delegateApiRequest(context);
   });
 
-  router.patch('/api/*', async (context) => {
+  router.patch('/api/*', async(context) => {
     return await delegateApiRequest(context);
   });
 
   // 支持 PUT 方法（如修改密码）
-  router.put('/api/*', async (context) => {
+  router.put('/api/*', async(context) => {
     return await delegateApiRequest(context);
   });
 
-  router.delete('/api/*', async (context) => {
+  router.delete('/api/*', async(context) => {
     return await delegateApiRequest(context);
   });
 
   // =================== 邮件接收路由 ===================
-  router.post('/receive', async (context) => {
+  router.post('/receive', async(context) => {
     const { request, env, authPayload } = context;
     const logId = `receive-${Date.now()}`;
     
@@ -552,6 +571,7 @@ async function delegateApiRequest(context) {
     .map(d => d.trim())
     .filter(Boolean);
     
+  // RESEND配置支持多种格式：    
   // RESEND配置支持多种格式：
   // 1. 单一API密钥：直接填写密钥
   // 2. 多域名配置：域名=密钥的键值对格式，如 "domain1.com=key1,domain2.com=key2"

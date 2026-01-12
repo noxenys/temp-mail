@@ -76,7 +76,7 @@ function outputToConsole(logEntry) {
  * @param {string} logId - 日志ID
  */
 export function debug(message, context = {}, logId = null) {
-  if (CURRENT_LOG_LEVEL > LOG_LEVELS.DEBUG) return;
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.DEBUG) {return;}
   
   const logEntry = formatLog('DEBUG', message, context, logId);
   outputToConsole(logEntry);
@@ -89,7 +89,7 @@ export function debug(message, context = {}, logId = null) {
  * @param {string} logId - 日志ID
  */
 export function info(message, context = {}, logId = null) {
-  if (CURRENT_LOG_LEVEL > LOG_LEVELS.INFO) return;
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.INFO) {return;}
   
   const logEntry = formatLog('INFO', message, context, logId);
   outputToConsole(logEntry);
@@ -102,7 +102,7 @@ export function info(message, context = {}, logId = null) {
  * @param {string} logId - 日志ID
  */
 export function warn(message, context = {}, logId = null) {
-  if (CURRENT_LOG_LEVEL > LOG_LEVELS.WARN) return;
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.WARN) {return;}
   
   const logEntry = formatLog('WARN', message, context, logId);
   outputToConsole(logEntry);

@@ -15,7 +15,7 @@ let lastCleanup = Date.now();
  */
 function cleanupExpiredCache() {
   const now = Date.now();
-  if (now - lastCleanup < cleanupInterval) return;
+  if (now - lastCleanup < cleanupInterval) {return;}
   
   for (const key in rateLimitCache) {
     if (rateLimitCache[key].expiresAt < now) {
@@ -87,9 +87,9 @@ function getClientIP(request) {
   const xForwardedFor = request.headers.get('x-forwarded-for');
   
   // 优先使用Cloudflare提供的IP
-  if (cfConnectingIp) return cfConnectingIp;
-  if (xRealIp) return xRealIp;
-  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
+  if (cfConnectingIp) {return cfConnectingIp;}
+  if (xRealIp) {return xRealIp;}
+  if (xForwardedFor) {return xForwardedFor.split(',')[0].trim();}
   
   // 默认返回未知IP
   return 'unknown';

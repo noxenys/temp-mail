@@ -16,7 +16,7 @@ export class AssetManager {
       '/html/mailboxes.html',
       '/mailboxes.html',
       '/mailbox.html',
-       '/html/mailbox.html',
+      '/html/mailbox.html',
       '/templates/app.html', 
       '/templates/footer.html', 
       '/templates/loading.html',
@@ -129,13 +129,13 @@ export class AssetManager {
       // 处理受保护的路径（需要管理员权限）
       if (this.isProtectedPath(pathname)) {
         const authResult = await this.checkProtectedPathAuth(request, JWT_TOKEN, url);
-        if (authResult) return authResult;
+        if (authResult) {return authResult;}
       }
 
       // 处理只允许未登录用户的路径（登录页）
       if (this.isGuestOnlyPath(pathname)) {
         const guestResult = await this.checkGuestOnlyPath(request, JWT_TOKEN, url);
-        if (guestResult) return guestResult;
+        if (guestResult) {return guestResult;}
       }
 
       // 如果没有Assets绑定，重定向到登录页
@@ -406,7 +406,7 @@ export class AssetManager {
     }
     const isStrictAdmin = (payload.role === 'admin' && (payload.username === '__root__' || payload.username));
     const isGuest = (payload.role === 'guest');
-    if (!isStrictAdmin && !isGuest){
+    if (!isStrictAdmin && !isGuest) {
       return Response.redirect(new URL('/', url).toString(), 302);
     }
     return env.ASSETS.fetch(request);

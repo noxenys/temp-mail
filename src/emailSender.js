@@ -7,7 +7,7 @@
  */
 function parseResendConfig(resendToken) {
   const config = {};
-  if (!resendToken) return config;
+  if (!resendToken) {return config;}
 
   // 尝试解析为JSON格式
   try {
@@ -38,7 +38,7 @@ function parseResendConfig(resendToken) {
  * @returns {string} 选择的API密钥，如果没有匹配则返回空字符串
  */
 export function selectApiKeyForDomain(fromEmail, resendConfig) {
-  if (!fromEmail) return '';
+  if (!fromEmail) {return '';}
 
   // 如果resendConfig是字符串且不包含等号，说明是单一API密钥
   if (typeof resendConfig === 'string' && !resendConfig.includes('=')) {
@@ -52,7 +52,7 @@ export function selectApiKeyForDomain(fromEmail, resendConfig) {
 
   // 提取发件人域名
   const emailMatch = String(fromEmail).match(/@([^>]+)/);
-  if (!emailMatch) return '';
+  if (!emailMatch) {return '';}
 
   const domain = emailMatch[1].toLowerCase().trim();
   
@@ -66,7 +66,7 @@ export function selectApiKeyForDomain(fromEmail, resendConfig) {
  * @returns {Array<string>} 配置的域名列表
  */
 export function getConfiguredDomains(resendConfig) {
-  if (!resendConfig) return [];
+  if (!resendConfig) {return [];}
 
   // 如果resendConfig是字符串且不包含等号，说明是单一API密钥，无法确定域名
   if (typeof resendConfig === 'string' && !resendConfig.includes('=')) {
@@ -80,14 +80,14 @@ export function getConfiguredDomains(resendConfig) {
   return Object.keys(config);
 }
 
-function buildHeaders(apiKey){
+function buildHeaders(apiKey) {
   return {
     'Authorization': `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
   };
 }
 
-function normalizeSendPayload(payload){
+function normalizeSendPayload(payload) {
   const {
     from,
     to,
@@ -107,26 +107,26 @@ function normalizeSendPayload(payload){
     to: Array.isArray(to) ? to : (to ? [to] : []),
     subject,
     html,
-    text,
+    text
   };
   // 支持自定义发件显示名：fromName + <from>
   // 仅当 fromName 非空白时才拼接，避免产生 ` <email>` 导致 Resend 校验失败
-  if (payload && typeof payload.fromName === 'string' && from){
+  if (payload && typeof payload.fromName === 'string' && from) {
     const displayName = payload.fromName.trim();
     if (displayName) {
       body.from = `${displayName} <${from}>`;
     }
   }
-  if (cc) body.cc = Array.isArray(cc) ? cc : [cc];
-  if (bcc) body.bcc = Array.isArray(bcc) ? bcc : [bcc];
-  if (replyTo) body.reply_to = replyTo;
-  if (headers && typeof headers === 'object') body.headers = headers;
-  if (attachments && Array.isArray(attachments)) body.attachments = attachments;
-  if (scheduledAt) body.scheduled_at = scheduledAt; // 传入 ISO 字符串
+  if (cc) {body.cc = Array.isArray(cc) ? cc : [cc];}
+  if (bcc) {body.bcc = Array.isArray(bcc) ? bcc : [bcc];}
+  if (replyTo) {body.reply_to = replyTo;}
+  if (headers && typeof headers === 'object') {body.headers = headers;}
+  if (attachments && Array.isArray(attachments)) {body.attachments = attachments;}
+  if (scheduledAt) {body.scheduled_at = scheduledAt;} // 传入 ISO 字符串
   return body;
 }
 
-export async function sendEmailWithResend(apiKey, payload){
+export async function sendEmailWithResend(apiKey, payload) {
   const body = normalizeSendPayload(payload);
   const resp = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -134,7 +134,7 @@ export async function sendEmailWithResend(apiKey, payload){
     body: JSON.stringify(body)
   });
   const data = await resp.json().catch(()=>({}));
-  if (!resp.ok){
+  if (!resp.ok) {
     const msg = data?.message || data?.error || resp.statusText || 'Resend send failed';
     throw new Error(msg);
   }
@@ -156,7 +156,7 @@ export async function sendEmailWithAutoResend(resendConfig, payload) {
   return await sendEmailWithResend(apiKey, payload);
 }
 
-export async function sendBatchWithResend(apiKey, payloads){
+export async function sendBatchWithResend(apiKey, payloads) {
   const items = Array.isArray(payloads) ? payloads.map(normalizeSendPayload) : [];
   const resp = await fetch('https://api.resend.com/emails/batch', {
     method: 'POST',
@@ -164,7 +164,7 @@ export async function sendBatchWithResend(apiKey, payloads){
     body: JSON.stringify(items)
   });
   const data = await resp.json().catch(()=>({}));
-  if (!resp.ok){
+  if (!resp.ok) {
     const msg = data?.message || data?.error || resp.statusText || 'Resend batch send failed';
     throw new Error(msg);
   }
@@ -199,7 +199,7 @@ export async function sendBatchWithAutoResend(resendConfig, payloads) {
 
   // 并行发送各组邮件
   const results = [];
-  const promises = Object.entries(groupedByDomain).map(async ([apiKey, groupPayloads]) => {
+  const promises = Object.entries(groupedByDomain).map(async([apiKey, groupPayloads]) => {
     try {
       const batchResult = await sendBatchWithResend(apiKey, groupPayloads);
       return { success: true, apiKey, results: batchResult };
@@ -226,42 +226,42 @@ export async function sendBatchWithAutoResend(resendConfig, payloads) {
   return results;
 }
 
-export async function getEmailFromResend(apiKey, id){
+export async function getEmailFromResend(apiKey, id) {
   const resp = await fetch(`https://api.resend.com/emails/${id}`, {
     method: 'GET',
     headers: buildHeaders(apiKey)
   });
   const data = await resp.json().catch(()=>({}));
-  if (!resp.ok){
+  if (!resp.ok) {
     const msg = data?.message || data?.error || resp.statusText || 'Resend get failed';
     throw new Error(msg);
   }
   return data;
 }
 
-export async function updateEmailInResend(apiKey, { id, scheduledAt }){
+export async function updateEmailInResend(apiKey, { id, scheduledAt }) {
   const body = {};
-  if (scheduledAt) body.scheduled_at = scheduledAt;
+  if (scheduledAt) {body.scheduled_at = scheduledAt;}
   const resp = await fetch(`https://api.resend.com/emails/${id}`, {
     method: 'PATCH',
     headers: buildHeaders(apiKey),
     body: JSON.stringify(body)
   });
   const data = await resp.json().catch(()=>({}));
-  if (!resp.ok){
+  if (!resp.ok) {
     const msg = data?.message || data?.error || resp.statusText || 'Resend update failed';
     throw new Error(msg);
   }
   return data;
 }
 
-export async function cancelEmailInResend(apiKey, id){
+export async function cancelEmailInResend(apiKey, id) {
   const resp = await fetch(`https://api.resend.com/emails/${id}/cancel`, {
     method: 'POST',
     headers: buildHeaders(apiKey)
   });
   const data = await resp.json().catch(()=>({}));
-  if (!resp.ok){
+  if (!resp.ok) {
     const msg = data?.message || data?.error || resp.statusText || 'Resend cancel failed';
     throw new Error(msg);
   }

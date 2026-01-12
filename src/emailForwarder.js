@@ -15,7 +15,7 @@
 export function forwardByLocalPart(message, localPart, ctx, env) {
   const rules = parseForwardRules(env?.FORWARD_RULES);
   const target = resolveTargetEmail(localPart, rules);
-  if (!target) return;
+  if (!target) {return;}
   try {
     ctx.waitUntil(message.forward(target));
   } catch (e) {
@@ -54,7 +54,7 @@ function parseForwardRules(rulesRaw) {
   const rules = [];
   for (const pair of trimmed.split(',')) {
     const [prefix, email] = pair.split('=').map(s => (s || '').trim());
-    if (!prefix || !email) continue;
+    if (!prefix || !email) {continue;}
     rules.push({ prefix, email });
   }
   return normalizeRules(rules);
@@ -70,7 +70,7 @@ function normalizeRules(items) {
   for (const it of items) {
     const prefix = String(it.prefix || '').toLowerCase();
     const email = String(it.email || '').trim();
-    if (!prefix || !email) continue;
+    if (!prefix || !email) {continue;}
     result.push({ prefix, email });
   }
   return result;
@@ -85,8 +85,8 @@ function normalizeRules(items) {
 function resolveTargetEmail(localPart, rules) {
   const lp = String(localPart || '').toLowerCase();
   for (const r of rules) {
-    if (r.prefix === '*') continue;
-    if (lp.startsWith(r.prefix)) return r.email;
+    if (r.prefix === '*') {continue;}
+    if (lp.startsWith(r.prefix)) {return r.email;}
   }
   const wildcard = rules.find(r => r.prefix === '*');
   return wildcard ? wildcard.email : null;

@@ -29,21 +29,21 @@ export async function createJwt(secret, extraPayload = {}) {
  * @returns {Promise<object|false>} 验证成功返回负载对象，失败返回false
  */
 export async function verifyJwt(secret, cookieHeader) {
-  if (!cookieHeader || !secret) return false;
+  if (!cookieHeader || !secret) {return false;}
   
   try {
     const cookie = cookieHeader.split(';').find(c => c.trim().startsWith(`${COOKIE_NAME}=`));
-    if (!cookie) return false;
+    if (!cookie) {return false;}
     
     const token = cookie.split('=')[1].trim();
-    if (!token || token.length < 10) return false; // 基本长度检查
+    if (!token || token.length < 10) {return false;} // 基本长度检查
     
     const parts = token.split('.');
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) {return false;}
     
     // 验证头部
     const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])));
-    if (header.alg !== 'HS256' || header.typ !== 'JWT') return false;
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {return false;}
     
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -56,16 +56,16 @@ export async function verifyJwt(secret, cookieHeader) {
     
     const data = parts[0] + '.' + parts[1];
     const valid = await crypto.subtle.verify('HMAC', key, base64UrlDecode(parts[2]), encoder.encode(data));
-    if (!valid) return false;
+    if (!valid) {return false;}
     
     const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
     
     // 验证过期时间
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp <= now) return false;
+    if (payload.exp <= now) {return false;}
     
     // 验证必要字段
-    if (!payload.role) return false;
+    if (!payload.role) {return false;}
     
     return payload;
   } catch (error) {
@@ -81,12 +81,12 @@ export async function verifyJwt(secret, cookieHeader) {
  * @returns {string} Cookie字符串
  */
 export function buildSessionCookie(token, reqUrl = '') {
-  try{
+  try {
     const u = new URL(reqUrl || 'http://localhost/');
     const isHttps = (u.protocol === 'https:');
     const secureFlag = isHttps ? ' Secure;' : '';
     return `${COOKIE_NAME}=${token}; HttpOnly;${secureFlag} Path=/; SameSite=Strict; Max-Age=86400`;
-  }catch(_){
+  } catch (_) {
     return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=86400`;
   }
 }
@@ -109,7 +109,7 @@ function base64UrlEncode(data) {
  * @returns {Promise<object|false>} 验证成功返回邮箱信息，失败返回false
  */
 export async function verifyMailboxLogin(emailAddress, password, DB) {
-  if (!emailAddress || !password) return false;
+  if (!emailAddress || !password) {return false;}
   
   try {
     const email = emailAddress.toLowerCase().trim();
@@ -181,7 +181,7 @@ async function sha256Hex(text) {
  * @returns {Promise<boolean>} 验证结果，true表示密码匹配
  */
 export async function verifyPassword(rawPassword, hashed) {
-  if (!hashed) return false;
+  if (!hashed) {return false;}
   try {
     const hex = (await sha256Hex(rawPassword)).toLowerCase();
     return hex === String(hashed || '').toLowerCase();
@@ -206,9 +206,9 @@ export async function hashPassword(password) {
  */
 function base64UrlDecode(str) {
   let s = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (s.length % 4) s += '=';
+  while (s.length % 4) {s += '=';}
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  for (let i = 0; i < bin.length; i++) {bytes[i] = bin.charCodeAt(i);}
   return bytes;
 }

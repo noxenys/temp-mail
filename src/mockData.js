@@ -11,7 +11,7 @@ export function buildMockEmails(count = 6) {
     (code) => `Your verification code is ${code}. It expires in 5 minutes`,
     (code) => `One-time code: ${code}`,
     (code) => `安全验证 · 验证码 ${code}`,
-    (code) => `Login code is ${code}`,
+    (code) => `Login code is ${code}`
   ];
   return Array.from({ length: count }).map((_, i) => {
     const id = 10000 + i;
@@ -26,7 +26,7 @@ export function buildMockEmails(count = 6) {
       received_at: formatTs(now - i * 600000),
       is_read: i > 1,
       content,
-      html_content,
+      html_content
     };
   });
 }
@@ -40,7 +40,7 @@ export function buildMockMailboxes(limit = 10, offset = 0, mailDomains = []) {
     created_at: formatTs(now - (offset + i) * 3600000),
     is_pinned: i < 2 ? 1 : 0, // 前两个邮箱设为置顶
     password_is_default: i % 3 === 0 ? 1 : 0, // 每三个邮箱有一个是默认密码
-    can_login: i < 5 ? 1 : 0, // 前五个邮箱允许登录
+    can_login: i < 5 ? 1 : 0 // 前五个邮箱允许登录
   }));
 }
 
@@ -52,7 +52,7 @@ export function buildMockEmailDetail(id = 10000) {
     subject: `演示邮件内容（验证码 ${code}）`,
     received_at: formatTs(Date.now()),
     content: `这是演示模式下的邮件内容，仅用于展示界面效果。验证码：${code}`,
-    html_content: `<p><strong>演示模式</strong>：该内容为模拟数据。</p><p>验证码：<strong>${code}</strong></p>`,
+    html_content: `<p><strong>演示模式</strong>：该内容为模拟数据。</p><p>验证码：<strong>${code}</strong></p>`
   };
 }
 

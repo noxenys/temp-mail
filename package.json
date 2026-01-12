@@ -29,14 +29,15 @@
     "@cloudflare/workers-types": "^4.20241111.0"
   },
   "devDependencies": {
-    "wrangler": "^4.45.0",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.0",
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^2.0.0",
     "eslint": "^9.0.0",
-    "@eslint/js": "^9.0.0",
     "globals": "^15.0.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.5.4",
+    "uri-js": "^4.4.1",
+    "vitest": "^2.0.0",
+    "wrangler": "^4.45.0"
   },
   "engines": {
     "node": ">=18.0.0"

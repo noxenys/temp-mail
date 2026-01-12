@@ -25,7 +25,7 @@ export async function initDatabase(db) {
       _isFirstInit = false;
     } else {
       // 非首次启动时确保外键约束开启
-      await db.exec(`PRAGMA foreign_keys = ON;`);
+      await db.exec('PRAGMA foreign_keys = ON;');
     }
   } catch (error) {
     console.error('数据库初始化失败:', error);
@@ -48,41 +48,41 @@ async function performFirstTimeSetup(db) {
     await db.prepare('SELECT 1 FROM sent_emails LIMIT 1').all();
     // 所有5个必要表都存在，跳过创建
     return;
-  } catch (e) {
+  } catch (_) {
     // 有表不存在，继续初始化
     console.log('检测到数据库表不完整，开始初始化...');
   }
   
   // 临时禁用外键约束，避免创建表时的约束冲突
-  await db.exec(`PRAGMA foreign_keys = OFF;`);
+  await db.exec('PRAGMA foreign_keys = OFF;');
   
   // 创建表结构（仅在表不存在时）
-  await db.exec("CREATE TABLE IF NOT EXISTS mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, address TEXT NOT NULL UNIQUE, local_part TEXT NOT NULL, domain TEXT NOT NULL, password_hash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, last_accessed_at TEXT, expires_at TEXT, is_pinned INTEGER DEFAULT 0, can_login INTEGER DEFAULT 0);");
-  await db.exec("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, mailbox_id INTEGER NOT NULL, sender TEXT NOT NULL, to_addrs TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL, verification_code TEXT, preview TEXT, r2_bucket TEXT NOT NULL DEFAULT 'temp_email_eml', r2_object_key TEXT NOT NULL DEFAULT '', received_at TEXT DEFAULT CURRENT_TIMESTAMP, is_read INTEGER DEFAULT 0, FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id));");
-  await db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT, role TEXT NOT NULL DEFAULT 'user', can_send INTEGER NOT NULL DEFAULT 0, mailbox_limit INTEGER NOT NULL DEFAULT 10, created_at TEXT DEFAULT CURRENT_TIMESTAMP);");
-  await db.exec("CREATE TABLE IF NOT EXISTS user_mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, mailbox_id INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, is_pinned INTEGER NOT NULL DEFAULT 0, UNIQUE(user_id, mailbox_id), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE);");
-  await db.exec("CREATE TABLE IF NOT EXISTS sent_emails (id INTEGER PRIMARY KEY AUTOINCREMENT, resend_id TEXT, from_name TEXT, from_addr TEXT NOT NULL, to_addrs TEXT NOT NULL, subject TEXT NOT NULL, html_content TEXT, text_content TEXT, status TEXT DEFAULT 'queued', scheduled_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);")
+  await db.exec('CREATE TABLE IF NOT EXISTS mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, address TEXT NOT NULL UNIQUE, local_part TEXT NOT NULL, domain TEXT NOT NULL, password_hash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, last_accessed_at TEXT, expires_at TEXT, is_pinned INTEGER DEFAULT 0, can_login INTEGER DEFAULT 0);');
+  await db.exec('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, mailbox_id INTEGER NOT NULL, sender TEXT NOT NULL, to_addrs TEXT NOT NULL DEFAULT \'\', subject TEXT NOT NULL, verification_code TEXT, preview TEXT, r2_bucket TEXT NOT NULL DEFAULT \'temp_email_eml\', r2_object_key TEXT NOT NULL DEFAULT \'\', received_at TEXT DEFAULT CURRENT_TIMESTAMP, is_read INTEGER DEFAULT 0, FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id));');
+  await db.exec('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT, role TEXT NOT NULL DEFAULT \'user\', can_send INTEGER NOT NULL DEFAULT 0, mailbox_limit INTEGER NOT NULL DEFAULT 10, created_at TEXT DEFAULT CURRENT_TIMESTAMP);');
+  await db.exec('CREATE TABLE IF NOT EXISTS user_mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, mailbox_id INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, is_pinned INTEGER NOT NULL DEFAULT 0, UNIQUE(user_id, mailbox_id), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE);');
+  await db.exec('CREATE TABLE IF NOT EXISTS sent_emails (id INTEGER PRIMARY KEY AUTOINCREMENT, resend_id TEXT, from_name TEXT, from_addr TEXT NOT NULL, to_addrs TEXT NOT NULL, subject TEXT NOT NULL, html_content TEXT, text_content TEXT, status TEXT DEFAULT \'queued\', scheduled_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);');
   
   // 创建索引
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_address ON mailboxes(address);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_is_pinned ON mailboxes(is_pinned DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_address_created ON mailboxes(address, created_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_id ON messages(mailbox_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_r2_object_key ON messages(r2_object_key);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received ON messages(mailbox_id, received_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received_read ON messages(mailbox_id, received_at DESC, is_read);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user ON user_mailboxes(user_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_mailbox ON user_mailboxes(mailbox_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user_pinned ON user_mailboxes(user_id, is_pinned DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_composite ON user_mailboxes(user_id, mailbox_id, is_pinned);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_resend_id ON sent_emails(resend_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_status_created ON sent_emails(status, created_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_from_addr ON sent_emails(from_addr);`);
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_address ON mailboxes(address);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_is_pinned ON mailboxes(is_pinned DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_address_created ON mailboxes(address, created_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_id ON messages(mailbox_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_r2_object_key ON messages(r2_object_key);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received ON messages(mailbox_id, received_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received_read ON messages(mailbox_id, received_at DESC, is_read);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user ON user_mailboxes(user_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_mailbox ON user_mailboxes(mailbox_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user_pinned ON user_mailboxes(user_id, is_pinned DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_composite ON user_mailboxes(user_id, mailbox_id, is_pinned);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_resend_id ON sent_emails(resend_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_status_created ON sent_emails(status, created_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_from_addr ON sent_emails(from_addr);');
   
   // 重新启用外键约束
-  await db.exec(`PRAGMA foreign_keys = ON;`);
+  await db.exec('PRAGMA foreign_keys = ON;');
 }
 
 /**
@@ -93,7 +93,7 @@ async function performFirstTimeSetup(db) {
  */
 export async function setupDatabase(db) {
   // 临时禁用外键约束，避免创建表时的约束冲突
-  await db.exec(`PRAGMA foreign_keys = OFF;`);
+  await db.exec('PRAGMA foreign_keys = OFF;');
   
   // 创建所有表
   await db.exec(`
@@ -171,25 +171,25 @@ export async function setupDatabase(db) {
   `);
   
   // 创建所有索引
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_address ON mailboxes(address);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_is_pinned ON mailboxes(is_pinned DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_mailboxes_address_created ON mailboxes(address, created_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_id ON messages(mailbox_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_r2_object_key ON messages(r2_object_key);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received ON messages(mailbox_id, received_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received_read ON messages(mailbox_id, received_at DESC, is_read);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user ON user_mailboxes(user_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_mailbox ON user_mailboxes(mailbox_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user_pinned ON user_mailboxes(user_id, is_pinned DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_user_mailboxes_composite ON user_mailboxes(user_id, mailbox_id, is_pinned);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_resend_id ON sent_emails(resend_id);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_status_created ON sent_emails(status, created_at DESC);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_sent_emails_from_addr ON sent_emails(from_addr);`);
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_address ON mailboxes(address);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_is_pinned ON mailboxes(is_pinned DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_mailboxes_address_created ON mailboxes(address, created_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_id ON messages(mailbox_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_r2_object_key ON messages(r2_object_key);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received ON messages(mailbox_id, received_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_messages_mailbox_received_read ON messages(mailbox_id, received_at DESC, is_read);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user ON user_mailboxes(user_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_mailbox ON user_mailboxes(mailbox_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_user_pinned ON user_mailboxes(user_id, is_pinned DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_user_mailboxes_composite ON user_mailboxes(user_id, mailbox_id, is_pinned);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_resend_id ON sent_emails(resend_id);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_status_created ON sent_emails(status, created_at DESC);');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_sent_emails_from_addr ON sent_emails(from_addr);');
   
   // 重新启用外键约束
-  await db.exec(`PRAGMA foreign_keys = ON;`);
+  await db.exec('PRAGMA foreign_keys = ON;');
 }
 
 /**
@@ -202,7 +202,9 @@ export async function setupDatabase(db) {
  */
 export async function getOrCreateMailboxId(db, address, ctx = null) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) throw new Error('无效的邮箱地址');
+  if (!normalized) {
+    throw new Error('无效的邮箱地址');
+  }
   
   // 先检查缓存
   const cachedId = await getCachedMailboxId(db, normalized);
@@ -225,7 +227,9 @@ export async function getOrCreateMailboxId(db, address, ctx = null) {
     local_part = normalized.slice(0, at);
     domain = normalized.slice(at + 1);
   }
-  if (!local_part || !domain) throw new Error('无效的邮箱地址');
+  if (!local_part || !domain) {
+    throw new Error('无效的邮箱地址');
+  }
   
   // 使用单个查询检查并更新（优化性能）
   const existing = await db.prepare('SELECT id FROM mailboxes WHERE address = ? LIMIT 1').bind(normalized).all();
@@ -268,7 +272,9 @@ export async function getOrCreateMailboxId(db, address, ctx = null) {
  */
 export async function getMailboxIdByAddress(db, address) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
   
   // 使用缓存
   return await getCachedMailboxId(db, normalized);
@@ -283,7 +289,7 @@ export async function getMailboxIdByAddress(db, address) {
  */
 export async function checkMailboxOwnership(db, address, userId = null) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) return { exists: false, ownedByUser: false, mailboxId: null };
+  if (!normalized) {return { exists: false, ownedByUser: false, mailboxId: null };}
   
   // 检查邮箱是否存在
   const res = await db.prepare('SELECT id FROM mailboxes WHERE address = ? LIMIT 1').bind(normalized).all();
@@ -318,13 +324,17 @@ export async function checkMailboxOwnership(db, address, userId = null) {
  */
 export async function toggleMailboxPin(db, address, userId) {
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) throw new Error('无效的邮箱地址');
+  if (!normalized) {
+    throw new Error('无效的邮箱地址');
+  }
   const uid = Number(userId || 0);
-  if (!uid) throw new Error('未登录');
+  if (!uid) {
+    throw new Error('未登录');
+  }
 
   // 获取邮箱 ID
   const mbRes = await db.prepare('SELECT id FROM mailboxes WHERE address = ? LIMIT 1').bind(normalized).all();
-  if (!mbRes.results || mbRes.results.length === 0){
+  if (!mbRes.results || mbRes.results.length === 0) {
     throw new Error('邮箱不存在');
   }
   const mailboxId = mbRes.results[0].id;
@@ -332,7 +342,7 @@ export async function toggleMailboxPin(db, address, userId) {
   // 检查该邮箱是否属于该用户
   const umRes = await db.prepare('SELECT id, is_pinned FROM user_mailboxes WHERE user_id = ? AND mailbox_id = ? LIMIT 1')
     .bind(uid, mailboxId).all();
-  if (!umRes.results || umRes.results.length === 0){
+  if (!umRes.results || umRes.results.length === 0) {
     // 若尚未存在关联记录（例如严格管理员未分配该邮箱），则创建一条仅用于个人置顶的关联
     await db.prepare('INSERT INTO user_mailboxes (user_id, mailbox_id, is_pinned) VALUES (?, ?, 1)')
       .bind(uid, mailboxId).run();
@@ -361,7 +371,7 @@ export async function toggleMailboxPin(db, address, userId) {
  * @param {string} params.scheduledAt - 计划发送时间，默认为null
  * @returns {Promise<void>} 记录完成后无返回值
  */
-export async function recordSentEmail(db, { resendId, fromName, from, to, subject, html, text, status = 'queued', scheduledAt = null }){
+export async function recordSentEmail(db, { resendId, fromName, from, to, subject, html, text, status = 'queued', scheduledAt = null }) {
   const toAddrs = Array.isArray(to) ? to.join(',') : String(to || '');
   await db.prepare(`
     INSERT INTO sent_emails (resend_id, from_name, from_addr, to_addrs, subject, html_content, text_content, status, scheduled_at)
@@ -376,18 +386,22 @@ export async function recordSentEmail(db, { resendId, fromName, from, to, subjec
  * @param {object} fields - 需要更新的字段对象
  * @returns {Promise<void>} 更新完成后无返回值
  */
-export async function updateSentEmail(db, resendId, fields){
-  if (!resendId) return;
+export async function updateSentEmail(db, resendId, fields) {
+  if (!resendId) {
+    return;
+  }
   const allowed = ['status', 'scheduled_at'];
   const setClauses = [];
   const values = [];
-  for (const key of allowed){
-    if (key in (fields || {})){
+  for (const key of allowed) {
+    if (key in (fields || {})) {
       setClauses.push(`${key} = ?`);
       values.push(fields[key]);
     }
   }
-  if (!setClauses.length) return;
+  if (!setClauses.length) {
+    return;
+  }
   setClauses.push('updated_at = CURRENT_TIMESTAMP');
   const sql = `UPDATE sent_emails SET ${setClauses.join(', ')} WHERE resend_id = ?`;
   values.push(resendId);
@@ -399,7 +413,7 @@ export async function updateSentEmail(db, resendId, fields){
  * @param {object} db - 数据库连接对象
  * @returns {Promise<void>} 表创建完成后无返回值
  */
-async function ensureSentEmailsTable(db){
+async function ensureSentEmailsTable(db) {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS sent_emails (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -427,7 +441,7 @@ async function ensureSentEmailsTable(db){
  * @param {object} db - 数据库连接对象
  * @returns {Promise<void>} 表创建完成后无返回值
  */
-async function ensureUsersTables(db){
+async function ensureUsersTables(db) {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -470,9 +484,11 @@ async function ensureUsersTables(db){
  * @returns {Promise<object>} 创建的用户信息对象
  * @throws {Error} 当用户名为空时抛出异常
  */
-export async function createUser(db, { username, passwordHash = null, role = 'user', mailboxLimit = 10 }){
+export async function createUser(db, { username, passwordHash = null, role = 'user', mailboxLimit = 10 }) {
   const uname = String(username || '').trim().toLowerCase();
-  if (!uname) throw new Error('用户名不能为空');
+  if (!uname) {
+    throw new Error('用户名不能为空');
+  }
   const r = await db.prepare('INSERT INTO users (username, password_hash, role, mailbox_limit) VALUES (?, ?, ?, ?)')
     .bind(uname, passwordHash, role, Math.max(0, Number(mailboxLimit || 10))).run();
   const res = await db.prepare('SELECT id, username, role, mailbox_limit, created_at FROM users WHERE username = ? LIMIT 1')
@@ -487,17 +503,19 @@ export async function createUser(db, { username, passwordHash = null, role = 'us
  * @param {object} fields - 需要更新的字段对象
  * @returns {Promise<void>} 更新完成后无返回值
  */
-export async function updateUser(db, userId, fields){
+export async function updateUser(db, userId, fields) {
   const allowed = ['role', 'mailbox_limit', 'password_hash', 'can_send'];
   const setClauses = [];
   const values = [];
-  for (const key of allowed){
-    if (key in (fields || {})){
+  for (const key of allowed) {
+    if (key in (fields || {})) {
       setClauses.push(`${key} = ?`);
       values.push(fields[key]);
     }
   }
-  if (!setClauses.length) return;
+  if (!setClauses.length) {
+    return;
+  }
   const sql = `UPDATE users SET ${setClauses.join(', ')} WHERE id = ?`;
   values.push(userId);
   await db.prepare(sql).bind(...values).run();
@@ -518,7 +536,7 @@ export async function updateUser(db, userId, fields){
  * @param {number} userId - 用户ID
  * @returns {Promise<void>} 删除完成后无返回值
  */
-export async function deleteUser(db, userId){
+export async function deleteUser(db, userId) {
   // 关联表启用 ON DELETE CASCADE
   await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
 }
@@ -532,7 +550,7 @@ export async function deleteUser(db, userId){
  * @param {string} options.sort - 排序方向，'asc' 或 'desc'，默认'desc'
  * @returns {Promise<Array<object>>} 用户列表数组
  */
-export async function listUsersWithCounts(db, { limit = 50, offset = 0, sort = 'desc' } = {}){
+export async function listUsersWithCounts(db, { limit = 50, offset = 0, sort = 'desc' } = {}) {
   const orderDirection = (sort === 'asc') ? 'ASC' : 'DESC';
   const actualLimit = Math.max(1, Math.min(100, Number(limit) || 50));
   const actualOffset = Math.max(0, Number(offset) || 0);
@@ -584,27 +602,35 @@ export async function listUsersWithCounts(db, { limit = 50, offset = 0, sort = '
  * @returns {Promise<object>} 分配结果对象
  * @throws {Error} 当邮箱地址无效、用户不存在或达到邮箱上限时抛出异常
  */
-export async function assignMailboxToUser(db, { userId = null, username = null, address }){
+export async function assignMailboxToUser(db, { userId = null, username = null, address }) {
   const { getCachedUserQuota, invalidateUserQuotaCache } = await import('./cacheHelper.js');
   
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) throw new Error('邮箱地址无效');
+  if (!normalized) {
+    throw new Error('邮箱地址无效');
+  }
   // 查询或创建邮箱
   const mailboxId = await getOrCreateMailboxId(db, normalized);
 
   // 获取用户 ID
   let uid = userId;
-  if (!uid){
+  if (!uid) {
     const uname = String(username || '').trim().toLowerCase();
-    if (!uname) throw new Error('缺少用户标识');
+    if (!uname) {
+      throw new Error('缺少用户标识');
+    }
     const r = await db.prepare('SELECT id FROM users WHERE username = ? LIMIT 1').bind(uname).all();
-    if (!r.results || !r.results.length) throw new Error('用户不存在');
+    if (!r.results || !r.results.length) {
+      throw new Error('用户不存在');
+    }
     uid = r.results[0].id;
   }
 
   // 使用缓存校验上限
   const quota = await getCachedUserQuota(db, uid);
-  if (quota.used >= quota.limit) throw new Error('已达到邮箱上限');
+  if (quota.used >= quota.limit) {
+    throw new Error('已达到邮箱上限');
+  }
 
   // 绑定（唯一约束避免重复）
   await db.prepare('INSERT OR IGNORE INTO user_mailboxes (user_id, mailbox_id) VALUES (?, ?)').bind(uid, mailboxId).run();
@@ -622,7 +648,7 @@ export async function assignMailboxToUser(db, { userId = null, username = null, 
  * @param {number} limit - 查询数量限制，默认100
  * @returns {Promise<Array<object>>} 用户邮箱列表数组，包含地址、创建时间和置顶状态
  */
-export async function getUserMailboxes(db, userId, limit = 100){
+export async function getUserMailboxes(db, userId, limit = 100) {
   const sql = `
     SELECT m.address, m.created_at, um.is_pinned,
            COALESCE(m.can_login, 0) AS can_login
@@ -646,23 +672,31 @@ export async function getUserMailboxes(db, userId, limit = 100){
  * @returns {Promise<object>} 取消分配结果对象
  * @throws {Error} 当邮箱地址无效、用户不存在或邮箱未分配给该用户时抛出异常
  */
-export async function unassignMailboxFromUser(db, { userId = null, username = null, address }){
+export async function unassignMailboxFromUser(db, { userId = null, username = null, address }) {
   const { invalidateUserQuotaCache } = await import('./cacheHelper.js');
   
   const normalized = String(address || '').trim().toLowerCase();
-  if (!normalized) throw new Error('邮箱地址无效');
+  if (!normalized) {
+    throw new Error('邮箱地址无效');
+  }
   
   // 获取邮箱ID
   const mailboxId = await getMailboxIdByAddress(db, normalized);
-  if (!mailboxId) throw new Error('邮箱不存在');
+  if (!mailboxId) {
+    throw new Error('邮箱不存在');
+  }
 
   // 获取用户ID
   let uid = userId;
-  if (!uid){
+  if (!uid) {
     const uname = String(username || '').trim().toLowerCase();
-    if (!uname) throw new Error('缺少用户标识');
+    if (!uname) {
+      throw new Error('缺少用户标识');
+    }
     const r = await db.prepare('SELECT id FROM users WHERE username = ? LIMIT 1').bind(uname).all();
-    if (!r.results || !r.results.length) throw new Error('用户不存在');
+    if (!r.results || !r.results.length) {
+      throw new Error('用户不存在');
+    }
     uid = r.results[0].id;
   }
 
@@ -693,7 +727,7 @@ export async function getTotalMailboxCount(db) {
   
   try {
     // 使用缓存避免频繁的 COUNT 全表扫描
-    return await getCachedSystemStat(db, 'total_mailboxes', async (db) => {
+    return await getCachedSystemStat(db, 'total_mailboxes', async(db) => {
       const result = await db.prepare('SELECT COUNT(1) AS count FROM mailboxes').all();
       return result?.results?.[0]?.count || 0;
     });
