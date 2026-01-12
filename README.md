@@ -1,4 +1,4 @@
-﻿﻿﻿# Temp-Email 临时邮箱服务（基于 Cloudflare Workers）
+﻿# Temp-Email 临时邮箱服务（基于 Cloudflare Workers）
 
 > 本项目基于 [idinging/freemail](https://github.com/idinging/freemail) 项目的代码进行修改和定制化开发
 
