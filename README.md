@@ -1,6 +1,6 @@
 ﻿﻿# Temp Email - 临时邮箱服务
 
-[![Deploy to Cloudflare Workers](https://d1r7b50w78a6pv.cloudfront.net/deploy/button.svg)](https://dash.cloudflare.com/sign-up/workers-and-pages)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/noxenys/temp-email)
 
 ## 📋 目录
 - [项目概述](#-项目概述)
@@ -154,7 +154,7 @@
 
 ### 方案一：Cloudflare 一键部署（推荐）
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/your-username/temp-email)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/noxenys/temp-email)
 
 点击上方按钮，使用 Cloudflare 官方的一键部署功能，无需本地环境配置。
 
