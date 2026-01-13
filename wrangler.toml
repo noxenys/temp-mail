@@ -22,7 +22,7 @@ compatibility_flags = ["nodejs_compat"]
 # 部署时通过环境变量 D1_DATABASE_ID 设置数据库ID
 [[d1_databases]]
 binding = "TEMP_MAIL_DB"
-database_name = "temp_email_db"
+name = "temp_email_db"
 database_id = "${D1_DATABASE_ID}"
 
 # 静态资源目录（Workers + Assets）

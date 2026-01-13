@@ -19,14 +19,34 @@ async function updateWranglerConfig(databaseId) {
     
     // 更新数据库绑定信息
     const updatedContent = wranglerContent.replace(
-      new RegExp(`\\[\[d1_databases\]\]\\s*name = \"${DATABASE_NAME}\"\\s*database_id = \"[a-f0-9-]+\"`, 'g'),
+      new RegExp(`\\[\\[d1_databases\\]\\]\\s*name = \"${DATABASE_NAME}\"\\s*database_id = \"[a-f0-9-]+\"`, 'g'),
       `[[d1_databases]]\nname = "${DATABASE_NAME}"\ndatabase_id = "${databaseId}"`
     );
     
     writeFileSync('wrangler.toml', updatedContent);
     console.log(`✅ 已更新 wrangler.toml 中的数据库绑定: ${databaseId}`);
   } catch (error) {
-    console.log('ℹ️ 未找到 wrangler.toml 文件，将使用动态数据库绑定');
+    console.log('ℹ️ 未找到 wrangler.toml 文件，创建新的配置文件');
+    
+    // 创建新的 wrangler.toml 文件
+    const wranglerConfig = `name = "temp-email"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+name = "${DATABASE_NAME}"
+database_id = "${databaseId}"
+binding = "${DATABASE_BINDING}"
+
+[env.production]
+name = "temp-email"
+
+[[env.production.d1_databases]]
+name = "${DATABASE_NAME}"
+database_id = "${databaseId}"
+binding = "${DATABASE_BINDING}"`;
+    
+    writeFileSync('wrangler.toml', wranglerConfig);
+    console.log(`✅ 已创建 wrangler.toml 文件并设置数据库绑定: ${databaseId}`);
   }
 }
 
@@ -148,6 +168,14 @@ try {
   
   // 4. 设置环境变量（如果提供了）
   console.log('🔧 设置环境变量...');
+  
+  // 首先确保D1_DATABASE_ID环境变量已设置
+  let databaseId = await getDatabaseId();
+  if (databaseId) {
+    process.env.D1_DATABASE_ID = databaseId;
+    console.log(`✅ 已设置D1_DATABASE_ID环境变量: ${databaseId}`);
+  }
+  
   const envVars = [
     // 必需环境变量
     { name: 'ADMIN_PASSWORD', value: process.env.ADMIN_PASSWORD },
