@@ -99,4 +99,10 @@ Thumbs.db
 /asset/bookmarks_2025_9_5_2.html
 /asset/bookmarks_2025_9_5.html
 
+# Local development files
+.env
+.wrangler/
+worker.js
+worker.js.map
+
 eml

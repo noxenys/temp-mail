@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>临时邮箱</title>
     <!-- 运行时注入域名列表（从 env.MAIL_DOMAIN 解析），用于前端域名选择 -->
-    <meta name="mail-domains" content="">
+    <meta name="mail-domains" content="{{MAIL_DOMAINS}}">
     <link rel="preload" href="/html/app.html" as="fetch" crossorigin>
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -24,7 +24,78 @@
     <script src="/js/app-router.js" defer></script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="first-screen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;z-index:9999">
+        <div style="text-align:center;padding:2rem;background:white;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.1);min-width:300px">
+          <div style="font-size:3rem;margin-bottom:1rem">📧</div>
+          <h2 style="margin-bottom:1.5rem;color:#1f2937">生成临时邮箱</h2>
+          <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+            <select id="domain-select" style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px">
+              <option value="">选择域名</option>
+            </select>
+            <button id="generate-btn" style="padding:0.5rem 1rem;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer">生成</button>
+          </div>
+          <div id="result-area" style="display:none">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+              <input id="generated-email" type="text" readonly style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb">
+              <button id="copy-btn" style="padding:0.5rem;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer">复制</button>
+            </div>
+            <button id="continue-btn" style="width:100%;padding:0.5rem;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer">继续使用</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // 首屏邮箱生成逻辑
+      (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+          const domainMeta = document.querySelector('meta[name="mail-domains"]');
+          const domains = domainMeta?.content || 'example.com';
+          const domainList = domains.split(',').filter(d => d.trim());
+          
+          const select = document.getElementById('domain-select');
+          const generateBtn = document.getElementById('generate-btn');
+          const resultArea = document.getElementById('result-area');
+          const generatedEmail = document.getElementById('generated-email');
+          const copyBtn = document.getElementById('copy-btn');
+          const continueBtn = document.getElementById('continue-btn');
+          const firstScreen = document.getElementById('first-screen');
+          
+          // 填充域名下拉框
+          domainList.forEach(domain => {
+            const option = document.createElement('option');
+            option.value = domain;
+            option.textContent = domain;
+            select.appendChild(option);
+          });
+          
+          // 生成邮箱
+          generateBtn.addEventListener('click', function() {
+            if (!select.value) {
+              window.showToast?.('请先选择域名', 'warning');
+              return;
+            }
+            
+            const username = Math.random().toString(36).substring(2, 10);
+            const email = `${username}@${select.value}`;
+            generatedEmail.value = email;
+            resultArea.style.display = 'block';
+          });
+          
+          // 复制邮箱
+          copyBtn.addEventListener('click', function() {
+            generatedEmail.select();
+            document.execCommand('copy');
+            window.showToast?.('邮箱已复制到剪贴板', 'success');
+          });
+          
+          // 继续使用
+          continueBtn.addEventListener('click', function() {
+            firstScreen.style.display = 'none';
+          });
+        });
+      })();
+    </script>
     <script>
       // 改进的路由守卫逻辑：优先使用 loading 页面进行权限检查，避免登录页闪屏
       (function() {
@@ -213,4 +284,3 @@
     </script>
   </body>
   </html>
-

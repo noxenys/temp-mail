@@ -10,20 +10,20 @@ compatibility_flags = [
 # 环境配置
 [env.production]
 # 生产环境配置 - 敏感信息应通过环境变量设置
-compatibility_date = "2026-01-11"
+compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 [env.staging]
 # 预发布环境配置
-compatibility_date = "2026-01-11"
+compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 # D1 数据库绑定（Wrangler v4 语法）
-# 注意：Wrangler v4 使用 database_name 而不是 name
 [[d1_databases]]
 binding = "temp_email_db"
 database_name = "temp_email_db"
-database_id = "${D1_DATABASE_ID}"  # TODO: 需要获取实际的数据库ID
+database_id = "${D1_DATABASE_ID}"
+# CI/本地需提供 D1_DATABASE_ID；占位未替换将导致运行时无绑定
 
 # 静态资源目录（Workers + Assets）
 [assets]

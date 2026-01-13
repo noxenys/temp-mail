@@ -738,12 +738,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.debug({ logId, action: 'send_email', mode: 'mock' });
       return new Response('演示模式不可发送', { status: 403 });
     }
+    
+    // 空值守卫：检查 RESEND_API_KEY 配置
+    if (!RESEND_API_KEY) {
+      logger.error({ logId, action: 'send_email', error: 'resend_api_key_missing', status: 501 });
+      return new Response('Resend not configured', { status: 501 });
+    }
+    
     let sendPayload;
     try {
-      if (!RESEND_API_KEY) {
-        logger.error({ logId, action: 'send_email', error: 'resend_api_key_missing', status: 500 });
-        return new Response('未配置 Resend API Key', { status: 500 });
-      }
       
       // 校验是否允许发件
       const allowed = await checkSendPermission();
@@ -783,12 +786,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.debug({ logId, action: 'send_batch', mode: 'mock' });
       return new Response('演示模式不可发送', { status: 403 });
     }
+    
+    // 空值守卫：检查 RESEND_API_KEY 配置
+    if (!RESEND_API_KEY) {
+      logger.error({ logId, action: 'send_batch', error: 'resend_api_key_missing', status: 501 });
+      return new Response('Resend not configured', { status: 501 });
+    }
+    
     let items;
     try {
-      if (!RESEND_API_KEY) {
-        logger.error({ logId, action: 'send_batch', error: 'resend_api_key_missing', status: 500 });
-        return new Response('未配置 Resend API Key', { status: 500 });
-      }
       
       // 校验是否允许发件
       const allowed = await checkSendPermission();
@@ -841,13 +847,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.debug({ logId, action: 'get_send_result', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可查询真实发送', { status: 403 });
     }
+    
+    // 空值守卫：检查 RESEND_API_KEY 配置
+    if (!RESEND_API_KEY) {
+      logger.error({ logId, action: 'get_send_result', error: 'resend_api_key_missing', status: 501 });
+      return new Response('Resend not configured', { status: 501 });
+    }
+    
     const id = path.split('/')[3];
     logger.info({ logId, action: 'get_send_result', sendId: id });
     try {
-      if (!RESEND_API_KEY) {
-        logger.error({ logId, action: 'get_send_result', error: 'resend_api_key_missing', sendId: id, status: 500 });
-        return new Response('未配置 Resend API Key', { status: 500 });
-      }
       const data = await getEmailFromResend(RESEND_API_KEY, id);
       logger.info({ logId, action: 'get_send_result', result: { sendId: id, status: data?.status || 'unknown' } });
       return Response.json(data);
@@ -863,13 +872,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.debug({ logId, action: 'update_send', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可操作', { status: 403 });
     }
+    
+    // 空值守卫：检查 RESEND_API_KEY 配置
+    if (!RESEND_API_KEY) {
+      logger.error({ logId, action: 'update_send', error: 'resend_api_key_missing', status: 501 });
+      return new Response('Resend not configured', { status: 501 });
+    }
+    
     const id = path.split('/')[3];
     logger.info({ logId, action: 'update_send', sendId: id });
     try {
-      if (!RESEND_API_KEY) {
-        logger.error({ logId, action: 'update_send', error: 'resend_api_key_missing', sendId: id, status: 500 });
-        return new Response('未配置 Resend API Key', { status: 500 });
-      }
       const body = await request.json();
       logger.info({ logId, action: 'update_send', params: { sendId: id, updateType: body.status ? 'status' : body.scheduledAt ? 'schedule' : 'unknown' } });
       let data = { ok: true };
@@ -897,13 +909,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       logger.debug({ logId, action: 'cancel_send', mode: 'mock', sendId: path.split('/')[3] });
       return new Response('演示模式不可操作', { status: 403 });
     }
+    
+    // 空值守卫：检查 RESEND_API_KEY 配置
+    if (!RESEND_API_KEY) {
+      logger.error({ logId, action: 'cancel_send', error: 'resend_api_key_missing', status: 501 });
+      return new Response('Resend not configured', { status: 501 });
+    }
+    
     const id = path.split('/')[3];
     logger.info({ logId, action: 'cancel_send', sendId: id });
     try {
-      if (!RESEND_API_KEY) {
-        logger.error({ logId, action: 'cancel_send', error: 'resend_api_key_missing', sendId: id, status: 500 });
-        return new Response('未配置 Resend API Key', { status: 500 });
-      }
       const data = await cancelEmailInResend(RESEND_API_KEY, id);
       await updateSentEmail(db, id, { status: 'canceled' });
       logger.info({ logId, action: 'cancel_send', result: { sendId: id, canceled: true } });

@@ -149,9 +149,9 @@
             <span class="card-icon" id="box-icon">📬</span>
             <span id="box-title">收件箱</span>
           </h2>
-          <div class="view-switch">
-            <button id="tab-inbox" class="seg-btn" aria-pressed="true">收件箱</button>
-            <button id="tab-sent" class="seg-btn" aria-pressed="false">发件箱</button>
+          <div class="view-switch" role="tablist" aria-label="邮箱视图切换">
+            <button id="tab-inbox" class="seg-btn" role="tab" aria-pressed="true" aria-selected="true">收件箱</button>
+            <button id="tab-sent" class="seg-btn" role="tab" aria-pressed="false" aria-selected="false">发件箱</button>
           </div>
           <div id="list-loading" class="loading-indicator" style="pointer-events:none" role="status" aria-live="polite">
             <div class="spinner"></div>

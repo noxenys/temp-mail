@@ -2019,8 +2019,14 @@ if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
 // 切换收件箱/发件箱
 function switchToInbox(){
   isSentView = false;
-  if (els.tabInbox) els.tabInbox.setAttribute('aria-pressed', 'true');
-  if (els.tabSent) els.tabSent.setAttribute('aria-pressed', 'false');
+  if (els.tabInbox) {
+    els.tabInbox.setAttribute('aria-pressed', 'true');
+    els.tabInbox.setAttribute('aria-selected', 'true');
+  }
+  if (els.tabSent) {
+    els.tabSent.setAttribute('aria-pressed', 'false');
+    els.tabSent.setAttribute('aria-selected', 'false');
+  }
   if (els.boxTitle) els.boxTitle.textContent = '收件箱';
   if (els.boxIcon) els.boxIcon.textContent = '📬';
   const key = getViewKey();
@@ -2031,8 +2037,14 @@ function switchToInbox(){
 }
 function switchToSent(){
   isSentView = true;
-  if (els.tabInbox) els.tabInbox.setAttribute('aria-pressed', 'false');
-  if (els.tabSent) els.tabSent.setAttribute('aria-pressed', 'true');
+  if (els.tabInbox) {
+    els.tabInbox.setAttribute('aria-pressed', 'false');
+    els.tabInbox.setAttribute('aria-selected', 'false');
+  }
+  if (els.tabSent) {
+    els.tabSent.setAttribute('aria-pressed', 'true');
+    els.tabSent.setAttribute('aria-selected', 'true');
+  }
   if (els.boxTitle) els.boxTitle.textContent = '发件箱';
   if (els.boxIcon) els.boxIcon.textContent = '📤';
   const key = getViewKey();

@@ -20,9 +20,9 @@ export function getDatabase(env) {
 
   // 简化的数据库绑定名称白名单（按优先级排序）
   const allowedBindings = [
-    'temp_mail_db',      // 主绑定名称（推荐）
-    'temp_email_db',     // 当前配置的绑定名称
-    'DB'                 // 兼容性绑定名称
+    'temp_email_db',     // 首选 temp_email_db，因 wrangler.toml 当前绑定名为 temp_email_db
+    'temp_mail_db',      // 兼容性绑定名称（仅作兼容回退）
+    'DB'                 // 兼容性绑定名称（仅作兼容回退）
   ];
 
   // 遍历白名单中的绑定名称

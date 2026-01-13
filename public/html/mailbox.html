@@ -8,6 +8,42 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <style>.precheck-hide body{ visibility: hidden !important; }</style>
+  <style>
+    /* 三态容器样式 */
+    .state-empty, .state-error, .state-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      text-align: center;
+      color: #64748b;
+    }
+    
+    .state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    
+    .state-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #1e293b;
+    }
+    
+    .state-description {
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    
+    .state-button {
+      padding: 0.5rem 1.5rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+  </style>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="shortcut icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/app.css" />
@@ -21,6 +57,72 @@
         .then(s => {
           if (s && s.role === 'mailbox'){
             try{ document.documentElement.classList.remove('precheck-hide'); }catch(_){ }
+            
+            // 状态管理逻辑
+            const stateLoading = document.getElementById('state-loading');
+            const stateEmpty = document.getElementById('state-empty');
+            const stateError = document.getElementById('state-error');
+            const emailList = document.getElementById('email-list');
+            const listPager = document.getElementById('list-pager');
+            
+            // 状态切换函数
+            function showState(state) {
+              [stateLoading, stateEmpty, stateError, emailList, listPager].forEach(el => {
+                if (el) el.style.display = 'none';
+              });
+              
+              if (state === 'loading' && stateLoading) {
+                stateLoading.style.display = 'flex';
+              } else if (state === 'empty' && stateEmpty) {
+                stateEmpty.style.display = 'flex';
+              } else if (state === 'error' && stateError) {
+                stateError.style.display = 'flex';
+              } else if (state === 'list' && emailList) {
+                emailList.style.display = 'block';
+                if (listPager) listPager.style.display = 'flex';
+              }
+            }
+            
+            // 按钮事件绑定
+            document.getElementById('refresh-empty')?.addEventListener('click', () => {
+              loadEmails();
+            });
+            
+            document.getElementById('retry-error')?.addEventListener('click', () => {
+              loadEmails();
+            });
+            
+            // 邮件加载函数
+            function loadEmails() {
+              showState('loading');
+              
+              fetch('/api/emails', { 
+                headers: { 'Cache-Control': 'no-cache' } 
+              })
+                .then(r => {
+                  if (!r.ok) throw new Error('Network response was not ok');
+                  return r.json();
+                })
+                .then(data => {
+                  if (data && data.emails && data.emails.length > 0) {
+                    showState('list');
+                    // 这里应该调用现有的渲染逻辑
+                    if (window.renderEmailList) {
+                      window.renderEmailList(data.emails);
+                    }
+                  } else {
+                    showState('empty');
+                  }
+                })
+                .catch(error => {
+                  console.error('Failed to load emails:', error);
+                  showState('error');
+                });
+            }
+            
+            // 初始加载
+            loadEmails();
+            
             return;
           }
           // 其他角色：回首页
@@ -119,11 +221,28 @@
       </div>
       <div class="list-viewport" style="position:relative;contain:layout paint;isolation:isolate;">
         <div id="email-list" class="list"></div>
-        <div id="empty-state" class="empty-state" style="display:none">
-          <div class="empty-icon">📭</div>
-          <div class="empty-title">暂无邮件</div>
-          <div class="empty-description">仅显示近24小时内的邮件，超过24小时的邮件会自动删除</div>
+        
+        <!-- 三态容器 -->
+        <div id="state-loading" class="state-loading">
+          <div class="state-icon">⏳</div>
+          <div class="state-title">加载中...</div>
+          <div class="state-description">正在获取邮件列表，请稍候</div>
         </div>
+        
+        <div id="state-empty" class="state-empty">
+          <div class="state-icon">📭</div>
+          <div class="state-title">暂无邮件</div>
+          <div class="state-description">仅显示近24小时内的邮件，超过24小时的邮件会自动删除</div>
+          <button id="refresh-empty" class="state-button" style="background:#3b82f6;color:white;">刷新</button>
+        </div>
+        
+        <div id="state-error" class="state-error">
+          <div class="state-icon">❌</div>
+          <div class="state-title">加载失败</div>
+          <div class="state-description">无法获取邮件列表，请检查网络连接后重试</div>
+          <button id="retry-error" class="state-button" style="background:#ef4444;color:white;">重试</button>
+        </div>
+        
         <div id="list-pager" class="pager" style="display:none">
           <button id="prev-page" class="btn btn-ghost btn-sm">上一页</button>
           <span id="page-info" class="muted" style="min-width:100px;text-align:center"></span>

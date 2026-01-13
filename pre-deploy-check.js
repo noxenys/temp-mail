@@ -61,8 +61,103 @@ async function preDeployCheck() {
     }
 }
 
-if (require.main === module) {
-    preDeployCheck();
+/**
+ * 检查 wrangler.toml 配置
+ */
+function checkWranglerConfig() {
+    console.log('📋 检查 wrangler.toml 配置...');
+    
+    try {
+        const fs = require('fs');
+        const tomlContent = fs.readFileSync('wrangler.toml', 'utf8');
+        
+        // 检查 binding 必须为 temp_email_db
+        const bindingMatch = tomlContent.match(/binding\s*=\s*"([^"]+)"/);
+        if (!bindingMatch || bindingMatch[1] !== 'temp_email_db') {
+            console.error('❌ wrangler.toml 中 D1 数据库 binding 必须为 "temp_email_db"');
+            console.error('💡 请修改 wrangler.toml 中的 [[d1_databases]] binding 配置');
+            process.exit(1);
+        }
+        
+        console.log('✅ D1 数据库 binding 配置正确');
+        
+        // 检查 database_id 配置
+        const databaseIdMatch = tomlContent.match(/database_id\s*=\s*"([^"]+)"/);
+        if (!databaseIdMatch) {
+            console.error('❌ wrangler.toml 中缺少 database_id 配置');
+            process.exit(1);
+        }
+        
+        const databaseId = databaseIdMatch[1];
+        
+        // 检查 database_id 是否为无效值
+        if (databaseId === '' || databaseId === 'undefined') {
+            console.error('❌ wrangler.toml 中 database_id 不能为空或 "undefined"');
+            console.error('💡 请设置有效的 database_id');
+            process.exit(1);
+        }
+        
+        // 检查是否为形如 "${...}" 的占位符且未提供环境变量
+        const placeholderRegex = /^\$\{([^}]+)\}$/;
+        const placeholderMatch = databaseId.match(placeholderRegex);
+        
+        if (placeholderMatch) {
+            const envVarName = placeholderMatch[1];
+            if (!process.env[envVarName]) {
+                console.error(`❌ wrangler.toml 中 database_id 为占位符 "${databaseId}"，但未提供环境变量 ${envVarName}`);
+                console.error('💡 请在部署前设置环境变量或使用实际的 database_id');
+                process.exit(1);
+            }
+        }
+        
+        console.log('✅ database_id 配置有效');
+        
+    } catch (error) {
+        console.error('❌ 读取 wrangler.toml 失败:', error.message);
+        process.exit(1);
+    }
 }
 
-module.exports = { preDeployCheck };
+/**
+ * 检查 server.js 的 logger 导入
+ */
+function checkServerLoggerImport() {
+    console.log('📋 检查 server.js logger 导入...');
+    
+    try {
+        const fs = require('fs');
+        const serverContent = fs.readFileSync('src/server.js', 'utf8');
+        
+        // 检查是否包含 logger 导入语句
+        const loggerImportRegex = /import\s+(?:\*\s+as\s+)?logger\s+from\s+['"]\.\/logger(?:\.js)?['"]/;
+        const hasLoggerImport = loggerImportRegex.test(serverContent);
+        
+        if (!hasLoggerImport) {
+            console.log('⚠️  WARNING: server.js 中未检测到显式的 logger 导入');
+            console.log('💡 建议添加: import * as logger from \'./logger.js\'');
+        } else {
+            console.log('✅ logger 导入正确');
+        }
+        
+    } catch (error) {
+        console.error('❌ 读取 server.js 失败:', error.message);
+        process.exit(1);
+    }
+}
+
+async function enhancedPreDeployCheck() {
+    console.log('🔍 开始部署前检查...\n');
+    
+    // 新增检查项
+    checkWranglerConfig();
+    checkServerLoggerImport();
+    
+    // 原有检查逻辑
+    await preDeployCheck();
+}
+
+if (require.main === module) {
+    enhancedPreDeployCheck();
+}
+
+module.exports = { preDeployCheck, enhancedPreDeployCheck };

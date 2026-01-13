@@ -1,10 +1,10 @@
-/* global logger */
 import { initDatabase } from './database.js';
 import { handleEmailReceive } from './apiHandlers.js';
 import { createRouter, authMiddleware } from './routes.js';
 import { createAssetManager } from './assetManager.js';
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
 import { rateLimitMiddleware } from './rateLimit.js';
+import * as logger from './logger.js';
 
 export default {
   /**
