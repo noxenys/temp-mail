@@ -17,11 +17,27 @@ async function updateWranglerConfig(databaseId) {
   try {
     const wranglerContent = readFileSync('wrangler.toml', 'utf8');
     
-    // 更新数据库绑定信息
-    const updatedContent = wranglerContent.replace(
-      new RegExp(`\\[\\[d1_databases\\]\\]\\s*name = \"${DATABASE_NAME}\"\\s*database_id = \"[a-f0-9-]+\"`, 'g'),
-      `[[d1_databases]]\nname = "${DATABASE_NAME}"\ndatabase_id = "${databaseId}"`
+    // 更新数据库绑定信息 - 处理多种可能的格式
+    let updatedContent = wranglerContent;
+    
+    // 情况1: 替换具体的数据库ID
+    updatedContent = updatedContent.replace(
+      new RegExp(`database_id = \"[a-f0-9-]+\"`, 'g'),
+      `database_id = "${databaseId}"`
     );
+    
+    // 情况2: 替换环境变量格式
+    updatedContent = updatedContent.replace(
+      new RegExp(`database_id = \"\\\${D1_DATABASE_ID}\"`, 'g'),
+      `database_id = "${databaseId}"`
+    );
+    
+    // 情况3: 确保数据库配置存在
+    if (!updatedContent.includes(`name = "${DATABASE_NAME}"`)) {
+      // 如果数据库配置不存在，添加完整的配置
+      const dbConfig = `\n\n[[d1_databases]]\nname = "${DATABASE_NAME}"\ndatabase_id = "${databaseId}"\nbinding = "${DATABASE_BINDING}"`;
+      updatedContent += dbConfig;
+    }
     
     writeFileSync('wrangler.toml', updatedContent);
     console.log(`✅ 已更新 wrangler.toml 中的数据库绑定: ${databaseId}`);
@@ -30,16 +46,20 @@ async function updateWranglerConfig(databaseId) {
     
     // 创建新的 wrangler.toml 文件
     const wranglerConfig = `name = "temp-email"
+main = "worker.js"
 compatibility_date = "2024-01-01"
 
+# D1 数据库配置
 [[d1_databases]]
 name = "${DATABASE_NAME}"
 database_id = "${databaseId}"
 binding = "${DATABASE_BINDING}"
 
+# 生产环境配置
 [env.production]
 name = "temp-email"
 
+# 生产环境D1数据库配置
 [[env.production.d1_databases]]
 name = "${DATABASE_NAME}"
 database_id = "${databaseId}"
