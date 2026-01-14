@@ -301,6 +301,11 @@ function createEmailItem(email) {
   const subjectText = escapeHtml(email.subject || '(无主题)');
   const previewText = escapeHtml(preview);
 
+  const isPinned = !!email.is_pinned;
+  const pinIcon = isPinned ? '⭐' : '☆';
+  const pinTitle = isPinned ? '取消重要标记' : '标记为重要';
+  const pinClass = isPinned ? 'btn-pin active' : 'btn-pin';
+
   item.innerHTML = `
     <div class="email-meta">
       <span class="meta-from"><span class="meta-label">发件人</span><span class="meta-from-text">${senderText}</span></span>
@@ -318,6 +323,9 @@ function createEmailItem(email) {
         </div>
       </div>
       <div class="email-actions">
+        <button class="btn btn-secondary btn-sm ${pinClass}" onclick="togglePin(event, ${email.id}, ${!isPinned})" title="${pinTitle}" style="${isPinned ? 'color: #f59e0b;' : ''}">
+          <span class="btn-icon">${pinIcon}</span>
+        </button>
         <button class="btn btn-secondary btn-sm" data-code="${listCode || ''}" onclick="copyFromList(event, ${email.id})" title="复制内容或验证码">
           <span class="btn-icon">📋</span>
         </button>
@@ -806,6 +814,35 @@ function escapeHtml(text) {
 // 暴露全局函数
 window.viewEmailDetail = viewEmailDetail;
 window.deleteEmail = deleteEmail;
+window.togglePin = togglePin;
+
+/**
+ * 切换邮件重要标记
+ */
+async function togglePin(event, id, newState) {
+  if(event) event.stopPropagation();
+  try {
+    const res = await fetch(`/api/emails/${id}/pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_pinned: newState })
+    });
+    if (res.ok) {
+      showToast(newState ? '已标记为重要' : '已取消重要标记', 'success');
+      // 更新本地数据并重绘
+      const idx = emails.findIndex(e => e.id === id);
+      if (idx > -1) { 
+        emails[idx].is_pinned = newState ? 1 : 0; 
+        renderEmailList();
+      }
+    } else {
+      showToast('操作失败', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('网络错误', 'error');
+  }
+}
 
 /**
  * 从文本中提取验证码/激活码

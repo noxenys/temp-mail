@@ -39,39 +39,50 @@ function getRateLimitKey(ip, path) {
  * 速率限制配置
  */
 const rateLimitConfig = {
-  // 通用API限制
   default: {
-    windowMs: 60 * 1000, // 1分钟窗口
-    maxRequests: 60,     // 最大60次请求
+    windowMs: 60 * 1000,
+    maxRequests: 60,
     message: '请求过于频繁，请稍后再试'
   },
-  
-  // 登录API限制（防止暴力破解）
   '/api/login': {
-    windowMs: 1 * 60 * 1000, // 1分钟窗口
-    maxRequests: 5,          // 最大5次登录尝试
+    windowMs: 1 * 60 * 1000,
+    maxRequests: 5,
     message: '登录尝试过于频繁，请稍后再试'
   },
-  
-  // 邮件API限制
   '/api/mail': {
-    windowMs: 30 * 1000,     // 30秒窗口
-    maxRequests: 30,         // 最大30次请求
+    windowMs: 30 * 1000,
+    maxRequests: 30,
     message: '邮件请求过于频繁，请稍后再试'
   },
-  
-  // 用户管理API限制
   '/api/users': {
-    windowMs: 60 * 1000,     // 1分钟窗口
-    maxRequests: 20,         // 最大20次请求
+    windowMs: 60 * 1000,
+    maxRequests: 20,
     message: '用户管理操作过于频繁，请稍后再试'
   },
-  
-  // 邮箱创建API限制
   '/api/mailbox': {
-    windowMs: 10 * 60 * 1000, // 10分钟窗口
-    maxRequests: 5,          // 最大5次创建
+    windowMs: 10 * 60 * 1000,
+    maxRequests: 5,
     message: '邮箱创建过于频繁，请稍后再试'
+  },
+  'mailbox:read': {
+    windowMs: 30 * 1000,
+    maxRequests: 30,
+    message: '该邮箱查询过于频繁，请稍后再试'
+  },
+  'send:user': {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: '该用户发件过于频繁，请稍后再试'
+  },
+  'send:from': {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: '该发件地址发送过于频繁，请稍后再试'
+  },
+  'receive:mailbox': {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: '该邮箱接收邮件过于频繁，请稍后再试'
   }
 };
 
@@ -198,5 +209,57 @@ export function getRateLimitStatus(ip, path) {
     count: record.count,
     remaining,
     resetTime: record.expiresAt
+  };
+}
+
+export function checkCustomRateLimit(key, configKey) {
+  if (!key) {return null;}
+  cleanupExpiredCache();
+  const config = rateLimitConfig[configKey] || rateLimitConfig.default;
+  const cacheKey = `k:${String(configKey || 'default')}:${String(key)}`;
+  const now = Date.now();
+  const windowStart = now - config.windowMs;
+  if (!rateLimitCache[cacheKey]) {
+    rateLimitCache[cacheKey] = {
+      count: 1,
+      firstRequest: now,
+      expiresAt: now + config.windowMs
+    };
+  } else {
+    const record = rateLimitCache[cacheKey];
+    if (record.firstRequest < windowStart) {
+      record.count = 1;
+      record.firstRequest = now;
+      record.expiresAt = now + config.windowMs;
+    } else {
+      record.count++;
+    }
+    if (record.count > config.maxRequests) {
+      return {
+        status: 429,
+        body: JSON.stringify({
+          success: false,
+          error: config.message,
+          retryAfter: Math.ceil((record.expiresAt - now) / 1000)
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((record.expiresAt - now) / 1000).toString(),
+          'X-RateLimit-Limit': config.maxRequests.toString(),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': Math.ceil(record.expiresAt / 1000).toString()
+        }
+      };
+    }
+    record.expiresAt = now + config.windowMs;
+  }
+  const record = rateLimitCache[cacheKey];
+  const remaining = Math.max(0, config.maxRequests - record.count);
+  return {
+    headers: {
+      'X-RateLimit-Limit': config.maxRequests.toString(),
+      'X-RateLimit-Remaining': remaining.toString(),
+      'X-RateLimit-Reset': Math.ceil(record.expiresAt / 1000).toString()
+    }
   };
 }

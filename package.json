@@ -1,22 +1,22 @@
 {
-  "name": "temp-email",
+  "name": "temp-mail",
   "version": "1.0.0",
   "description": "基于 Cloudflare Workers 的临时邮箱服务",
   "type": "module",
   "main": "worker.js",
   "scripts": {
     "dev": "wrangler dev",
-    "predeploy": "node pre-deploy-check.js",
+    "predeploy": "node pre-deploy-check.cjs",
     "deploy": "node deploy-with-env.cjs",
     "deploy:checked": "npm run predeploy && node deploy-with-env.cjs",
     "deploy:direct": "wrangler deploy",
-    "d1:setup": "wrangler d1 create temp_email_db --remote || true && npm run d1:execute-basic:remote",
-    "d1:execute:local": "wrangler d1 execute temp_email_db --local --file=d1-init.sql",
-    "d1:execute:remote": "wrangler d1 execute temp_email_db --remote --file=d1-init.sql",
-    "d1:execute-basic:local": "wrangler d1 execute temp_email_db --local --file=d1-init-basic.sql",
-    "d1:execute-basic:remote": "wrangler d1 execute temp_email_db --remote --file=d1-init-basic.sql",
-    "d1:query:local": "wrangler d1 execute temp_email_db --local",
-    "d1:query:remote": "wrangler d1 execute temp_email_db --remote",
+    "d1:setup": "wrangler d1 create temp_mail_db --remote || true && npm run d1:execute-basic:remote",
+    "d1:execute:local": "wrangler d1 execute temp_mail_db --local --file=d1-init.sql",
+    "d1:execute:remote": "wrangler d1 execute temp_mail_db --remote --file=d1-init.sql",
+    "d1:execute-basic:local": "wrangler d1 execute temp_mail_db --local --file=d1-init-basic.sql",
+    "d1:execute-basic:remote": "wrangler d1 execute temp_mail_db --remote --file=d1-init-basic.sql",
+    "d1:query:local": "wrangler d1 execute temp_mail_db --local",
+    "d1:query:remote": "wrangler d1 execute temp_mail_db --remote",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -45,7 +45,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/noxenys/temp-email"
+    "url": "https://github.com/noxenys/temp-mail"
   },
   "keywords": [
     "cloudflare",

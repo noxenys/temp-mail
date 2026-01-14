@@ -1,5 +1,6 @@
-import { initDatabase } from './database.js';
+import { initDatabase, syncDomains } from './database.js';
 import { handleEmailReceive } from './apiHandlers.js';
+import { parseEmailBody } from './emailParser.js';
 import { createRouter, authMiddleware } from './routes.js';
 import { createAssetManager } from './assetManager.js';
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
@@ -69,6 +70,13 @@ export default {
       // 初始化数据库（initDatabase内部已处理幂等性）
       await initDatabase(DB);
       logger.debug('数据库初始化完成', {}, logId);
+
+      // 自动同步域名（异步执行，不阻塞响应）
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil(syncDomains(DB, MAIL_DOMAINS).catch(err => {
+          logger.error('域名自动同步失败', err, {}, logId);
+        }));
+      }
 
       // 创建路由器并添加认证中间件
       const router = createRouter();
@@ -143,37 +151,52 @@ export default {
     const logId = logger.generateLogId ? logger.generateLogId() : `email-${Date.now()}`;
     
     try {
+      const subject = message.headers.get('subject') || '(无主题)';
+      
       logger.info('邮件接收开始', {
         from: message.from,
         to: message.to,
-        subject: message.subject?.substring(0, 100)
+        subject: subject.substring(0, 100)
       }, logId);
       
       const DB = await getDatabaseWithValidation(env);
       
-      // 支持多个域名
-      const MAIL_DOMAINS = (env.MAIL_DOMAIN || 'temp.example.com')
-        .split(/[,\s]+/)
-        .map(d => d.trim())
-        .filter(Boolean);
-
       // 初始化数据库
       await initDatabase(DB);
       
+      // 解析邮件内容
+      let text = '';
+      let html = '';
+      try {
+        const raw = await new Response(message.raw).text();
+        const parsed = parseEmailBody(raw);
+        text = parsed.text;
+        html = parsed.html;
+      } catch (e) {
+        logger.error('邮件解析失败', e, {}, logId);
+        text = '邮件内容解析失败';
+      }
+      
+      const emailData = {
+        from: message.from,
+        to: message.to,
+        subject: subject,
+        text,
+        html
+      };
+      
       // 处理邮件接收
-      const result = await handleEmailReceive(message, DB, MAIL_DOMAINS);
+      const result = await handleEmailReceive(emailData, DB, env);
       
       logger.info('邮件处理完成', {
-        result: result,
-        messageId: message.id
+        result: result?.status,
+        messageId: message.headers.get('Message-ID')
       }, logId);
       
-      return result;
     } catch (error) {
       logger.error('邮件处理错误', error, {
         from: message.from,
-        to: message.to,
-        subject: message.subject
+        to: message.to
       }, logId);
       throw error;
     }

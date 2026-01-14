@@ -1215,8 +1215,9 @@ body::before{
 }
 
 .mailbox-item.selected{
-  background: var(--primary-light);
-  border-color: var(--primary);
+  background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(129,140,248,0.06) 100%);
+  border-color: rgba(59,130,246,0.6);
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.15), 0 8px 18px rgba(15,23,42,0.12);
 }
 
 .mailbox-item .address{
@@ -1893,6 +1894,25 @@ select:disabled{
   display: block; /* 配合左对齐布局，避免高度不一导致错位 */
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.email-preview .code-tag{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.email-preview .preview-text{
+  display: inline;
 }
 
 /* 列表三行布局：发件人/主题/内容 - 与meta区域对齐 */

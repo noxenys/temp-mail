@@ -5,7 +5,7 @@
   </div>
   <div id="role-badge" class="role-badge" title="欢迎用户："></div>
   <div class="nav-actions">
-    <a id="repo" class="btn btn-ghost" href="https://github.com/noxenys/temp-email" target="_blank" rel="noopener noreferrer" title="GitHub 开源仓库">
+    <a id="repo" class="btn btn-ghost" href="https://github.com/noxenys/temp-mail" target="_blank" rel="noopener noreferrer" title="GitHub 开源仓库">
       <span class="btn-icon">🔗</span>
       <span class="btn-text">GitHub</span>
     </a>
@@ -33,6 +33,12 @@
         </h3>
         <div class="sidebar-header-actions">
           <span id="quota" class="quota-display"></span>
+          <button id="tg-settings" class="sidebar-toggle-btn" title="Telegram 推送设置" style="margin-left:4px;">
+            🤖
+          </button>
+          <button id="mb-sort" class="sidebar-toggle-btn" title="按最近使用排序">
+            ⏱
+          </button>
           <button id="sidebar-toggle" class="sidebar-toggle-btn" title="收起侧板">
             <span id="sidebar-toggle-icon">◀</span>
           </button>
@@ -119,14 +125,14 @@
                   <span>用户名长度</span>
                 </label>
                 <div class="range-container">
-                  <input id="len-range" class="range" type="range" min="8" max="30" step="1" value="8" />
+                  <input id="len-range" class="range" type="range" min="4" max="30" step="1" value="8" />
                   <div class="range-display">
                     <span id="len-val" class="len-value">8</span>
                     <span class="len-unit">位</span>
                   </div>
                 </div>
               </div>
-               <div class="generate-action">
+              <div class="generate-action">
                  <div class="generate-buttons" style="display: flex; gap: 8px; margin-bottom: 8px; width: 100%;">
                    <button id="gen" class="btn btn-primary" style="flex: 1;">
                      <span class="btn-icon">🎲</span>
@@ -137,6 +143,10 @@
                      <span>随机人名</span>
                    </button>
                  </div>
+                 <label class="toggle" style="margin-bottom:8px;display:inline-flex;align-items:center;gap:6px;">
+                   <input id="auto-copy-toggle" type="checkbox" checked />
+                   <span style="font-size:12px;color:#64748b;">生成后自动复制邮箱地址</span>
+                 </label>
                  <button id="toggle-custom" class="btn btn-secondary btn-sm" style="width: 100%;" title="自定义邮箱">切换自定义</button>
                </div>
             </div>
@@ -237,6 +247,35 @@
           <div class="compose-actions">
             <button id="compose-cancel" class="btn btn-secondary">取消</button>
             <button id="compose-send" class="btn btn-primary">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="tg-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon">🤖</span>
+          <span>Telegram 推送设置</span>
+        </div>
+        <button id="tg-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="compose-form">
+          <div class="field-group">
+            <label class="field-label">Telegram Chat ID</label>
+            <input id="tg-chat-id" class="input field-input" type="text" placeholder="例如：123456789 或 -100xxxxxxxx" />
+            <div class="field-hint">从与你的 Bot 对话或群组中获取 chat_id。</div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Telegram 用户名（可选）</label>
+            <input id="tg-username" class="input field-input" type="text" placeholder="例如：my_username" />
+          </div>
+          <div class="compose-actions">
+            <button id="tg-unbind" class="btn btn-secondary">取消绑定</button>
+            <button id="tg-save" class="btn btn-primary">保存</button>
           </div>
         </div>
       </div>

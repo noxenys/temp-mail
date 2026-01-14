@@ -79,14 +79,13 @@
 
 ## 🔧 技术细节
 
-我已经更新了以下文件来支持环境变量配置：
+已通过以下文件支持环境变量配置：
 
-### 1. GitHub Actions工作流文件
-- 添加了环境变量传递：`ADMIN_PASSWORD`, `JWT_TOKEN`, `MAIL_DOMAIN`
+### 1. GitHub Actions 工作流文件
+- 在 `.github/workflows/ci.yml` 中添加了 `ADMIN_PASSWORD`, `JWT_SECRET`, `JWT_TOKEN`, `MAIL_DOMAIN`, `D1_DATABASE_ID` 等环境变量传递
 
 ### 2. 部署脚本
-- `deploy-github-actions.js` - 添加了环境变量设置逻辑
-- `deploy-github-actions-improved.js` - 添加了环境变量设置逻辑
+- `deploy-github-actions.js`：从 GitHub Secrets 读取必要环境变量并设置到 Worker
 
 ### 部署脚本现在会自动：
 1. 检查并创建D1数据库

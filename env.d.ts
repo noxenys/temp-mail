@@ -12,10 +12,19 @@ interface Env {
   
   // 环境变量
   JWT_SECRET: string;
+  JWT_TOKEN?: string;
   MAIL_DOMAIN: string;
-  FORWARD_RULES: string;
+  FORWARD_RULES?: string;
   RESEND_API_KEY?: string;
+  RESEND_TOKEN?: string;
+  RESEND?: string;
   ADMIN_PASSWORD?: string;
+  ADMIN_PASS?: string;
+  ADMIN_USERNAME?: string;
+  ADMIN_NAME?: string;
+  GUEST_PASSWORD?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
   CACHE_TTL?: string;
   
   // 缓存系统类型

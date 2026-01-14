@@ -1,12 +1,29 @@
  
 import { extractEmail, generateRandomId } from './commonUtils.js';
-import { buildMockEmails, buildMockMailboxes, buildMockEmailDetail } from './mockData.js';
 import { getOrCreateMailboxId, getMailboxIdByAddress, recordSentEmail, updateSentEmail, toggleMailboxPin, 
   listUsersWithCounts, createUser, updateUser, deleteUser, assignMailboxToUser, getUserMailboxes, unassignMailboxFromUser, 
-  checkMailboxOwnership, getTotalMailboxCount } from './database.js';
-import { parseEmailBody, extractVerificationCode } from './emailParser.js';
+  checkMailboxOwnership, getTotalMailboxCount, cleanupOldMessages, isSenderBlocked, listBlockedSenders, addBlockedSender, deleteBlockedSender, setMessagePinned } from './database.js';
+import { checkCustomRateLimit } from './rateLimit.js';
+import { parseEmailBody, extractVerificationCode, extractLoginLink } from './emailParser.js';
 import { sendEmailWithAutoResend, sendBatchWithAutoResend, getEmailFromResend, updateEmailInResend, cancelEmailInResend } from './emailSender.js';
+import { sendTelegramMessage } from './telegram.js';
 import logger from './logger.js';
+
+function escapeHtml(str) {
+  const s = String(str || '');
+  return s.replace(/[&<>]/g, function(ch) {
+    if (ch === '&') {
+      return '&amp;';
+    }
+    if (ch === '<') {
+      return '&lt;';
+    }
+    if (ch === '>') {
+      return '&gt;';
+    }
+    return ch;
+  });
+}
 
 /**
  * 处理API请求
@@ -16,13 +33,11 @@ import logger from './logger.js';
  * @param {object} options - 配置选项
  * @returns {Promise<Response>} 响应对象
  */
-export async function handleApiRequest(request, db, mailDomains, options = { mockOnly: false, resendApiKey: '', adminName: '', r2: null, authPayload: null, mailboxOnly: false }) {
+export async function handleApiRequest(request, db, mailDomains, options = { resendApiKey: '', adminName: '', r2: null, authPayload: null, mailboxOnly: false }) {
   const logId = logger.generateLogId ? logger.generateLogId() : `api-${Date.now()}`;
   const url = new URL(request.url);
   const path = url.pathname;
-  const isMock = !!options.mockOnly;
   const isMailboxOnly = !!options.mailboxOnly;
-  const MOCK_DOMAINS = ['exa.cc', 'exr.yp', 'duio.ty'];
   const RESEND_API_KEY = options.resendApiKey || '';
 
   // 记录API请求开始
@@ -30,7 +45,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     method: request.method,
     path: path,
     query: Object.fromEntries(url.searchParams),
-    isMock: isMock,
     isMailboxOnly: isMailboxOnly
   }, logId);
 
@@ -128,134 +142,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     return out;
   }
 
-  // ====== 演示模式：用户管理 Mock 状态 ======
-  // 注意：内存态仅用于演示，不持久化
-  if (!globalThis.__MOCK_USERS__) {
-    const now = new Date();
-    globalThis.__MOCK_USERS__ = [
-      { id: 1, username: 'demo1', role: 'user', can_send: 0, mailbox_limit: 5, created_at: now.toISOString().replace('T',' ').slice(0,19) },
-      { id: 2, username: 'demo2', role: 'user', can_send: 0, mailbox_limit: 8, created_at: now.toISOString().replace('T',' ').slice(0,19) },
-      { id: 3, username: 'operator', role: 'admin', can_send: 0, mailbox_limit: 20, created_at: now.toISOString().replace('T',' ').slice(0,19) }
-    ];
-    globalThis.__MOCK_USER_MAILBOXES__ = new Map(); // userId -> [{ address, created_at, is_pinned }]
-    // 为每个演示用户预生成若干邮箱，便于列表展示
-    try {
-      const domains = MOCK_DOMAINS;
-      for (const u of globalThis.__MOCK_USERS__) {
-        const maxCount = Math.min(u.mailbox_limit || 10, 8);
-        const minCount = Math.min(3, maxCount);
-        const count = Math.max(minCount, Math.min(maxCount, Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount));
-        const boxes = buildMockMailboxes(count, 0, domains);
-        globalThis.__MOCK_USER_MAILBOXES__.set(u.id, boxes);
-      }
-    } catch (err) { void err; }
-    globalThis.__MOCK_USER_LAST_ID__ = 3;
-  }
-
-  // =================== 用户管理（演示模式） ===================
-  if (isMock && path === '/api/users' && request.method === 'GET') {
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
-    const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
-    const sort = url.searchParams.get('sort') || 'desc';
-    
-    const list = (globalThis.__MOCK_USERS__ || []).map(u => {
-      const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
-      return { ...u, mailbox_count: boxes.length };
-    });
-    
-    // 按创建时间排序
-    list.sort((a, b) => {
-      const dateA = new Date(a.created_at);
-      const dateB = new Date(b.created_at);
-      return sort === 'asc' ? dateA - dateB : dateB - dateA;
-    });
-    
-    // 应用分页
-    const result = list.slice(offset, offset + limit);
-    return Response.json(result);
-  }
-  if (isMock && path === '/api/users' && request.method === 'POST') {
-    try {
-      const body = await request.json();
-      const username = String(body.username || '').trim().toLowerCase();
-      if (!username) {return new Response('用户名不能为空', { status: 400 });}
-      const exists = (globalThis.__MOCK_USERS__ || []).some(u => u.username === username);
-      if (exists) {return new Response('用户名已存在', { status: 400 });}
-      const role = (body.role === 'admin') ? 'admin' : 'user';
-      const mailbox_limit = Math.max(0, Number(body.mailboxLimit || 10));
-      const id = ++globalThis.__MOCK_USER_LAST_ID__;
-      const item = { id, username, role, can_send: 0, mailbox_limit, created_at: new Date().toISOString().replace('T',' ').slice(0,19) };
-      globalThis.__MOCK_USERS__.unshift(item);
-      return Response.json(item);
-    } catch (err) { void err; return new Response('创建失败', { status: 500 }); }
-  }
-  if (isMock && request.method === 'PATCH' && path.startsWith('/api/users/')) {
-    const id = Number(path.split('/')[3]);
-    const list = globalThis.__MOCK_USERS__ || [];
-    const idx = list.findIndex(u => u.id === id);
-    if (idx < 0) {return new Response('未找到用户', { status: 404 });}
-    try {
-      const body = await request.json();
-      if (typeof body.mailboxLimit !== 'undefined') {list[idx].mailbox_limit = Math.max(0, Number(body.mailboxLimit));}
-      if (typeof body.role === 'string') {list[idx].role = (body.role === 'admin' ? 'admin' : 'user');}
-      if (typeof body.can_send !== 'undefined') {list[idx].can_send = body.can_send ? 1 : 0;}
-      return Response.json({ success: true });
-    } catch (err) { void err; return new Response('更新失败', { status: 500 }); }
-  }
-  if (isMock && request.method === 'DELETE' && path.startsWith('/api/users/')) {
-    const id = Number(path.split('/')[3]);
-    const list = globalThis.__MOCK_USERS__ || [];
-    const idx = list.findIndex(u => u.id === id);
-    if (idx < 0) {return new Response('未找到用户', { status: 404 });}
-    list.splice(idx, 1);
-    globalThis.__MOCK_USER_MAILBOXES__?.delete(id);
-    return Response.json({ success: true });
-  }
-  if (isMock && path === '/api/users/assign' && request.method === 'POST') {
-    try {
-      const body = await request.json();
-      const username = String(body.username || '').trim().toLowerCase();
-      const address = String(body.address || '').trim().toLowerCase();
-      const u = (globalThis.__MOCK_USERS__ || []).find(x => x.username === username);
-      if (!u) {return new Response('用户不存在', { status: 404 });}
-      const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
-      if (boxes.length >= (u.mailbox_limit || 10)) {return new Response('已达到邮箱上限', { status: 400 });}
-      const item = { address, created_at: new Date().toISOString().replace('T',' ').slice(0,19), is_pinned: 0 };
-      boxes.unshift(item);
-      globalThis.__MOCK_USER_MAILBOXES__?.set(u.id, boxes);
-      return Response.json({ success: true });
-    } catch (err) { void err; return new Response('分配失败', { status: 500 }); }
-  }
-  if (isMock && path === '/api/users/unassign' && request.method === 'POST') {
-    try {
-      const body = await request.json();
-      const username = String(body.username || '').trim().toLowerCase();
-      const address = String(body.address || '').trim().toLowerCase();
-      const u = (globalThis.__MOCK_USERS__ || []).find(x => x.username === username);
-      if (!u) {return new Response('用户不存在', { status: 404 });}
-      const boxes = globalThis.__MOCK_USER_MAILBOXES__?.get(u.id) || [];
-      const index = boxes.findIndex(box => box.address === address);
-      if (index === -1) {return new Response('该邮箱未分配给该用户', { status: 400 });}
-      boxes.splice(index, 1);
-      globalThis.__MOCK_USER_MAILBOXES__?.set(u.id, boxes);
-      return Response.json({ success: true });
-    } catch (err) { void err; return new Response('取消分配失败', { status: 500 }); }
-  }
-  if (isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')) {
-    const id = Number(path.split('/')[3]);
-    const all = globalThis.__MOCK_USER_MAILBOXES__?.get(id) || [];
-    // 随机返回 3-8 个用于展示效果（若数量不足则返回全部）
-    const n = Math.min(all.length, Math.max(3, Math.min(8, Math.floor(Math.random() * 6) + 3)));
-    const list = all.slice(0, n);
-    return Response.json(list);
-  }
-
   // 返回域名列表给前端
   if (path === '/api/domains' && request.method === 'GET') {
-    if (isMock) {
-      logger.debug({ logId, action: 'get_domains', mode: 'mock' });
-      return Response.json(MOCK_DOMAINS);
-    }
     const domains = Array.isArray(mailDomains) ? mailDomains : [(mailDomains || 'temp.example.com')];
     logger.info({ logId, action: 'get_domains', result: { count: domains.length } });
     return Response.json(domains);
@@ -264,7 +152,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   if (path === '/api/generate') {
     const lengthParam = Number(url.searchParams.get('length') || 0);
     const randomId = generateRandomId(lengthParam || undefined);
-    const domains = isMock ? MOCK_DOMAINS : (Array.isArray(mailDomains) ? mailDomains : [(mailDomains || 'temp.example.com')]);
+    const domains = Array.isArray(mailDomains) ? mailDomains : [(mailDomains || 'temp.example.com')];
     const domainIdx = Math.max(0, Math.min(domains.length - 1, Number(url.searchParams.get('domainIndex') || 0)));
     const chosenDomain = domains[domainIdx] || domains[0];
     const email = `${randomId}@${chosenDomain}`;
@@ -272,44 +160,40 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     logger.info({ logId, action: 'generate_email', params: { length: lengthParam, domainIndex: domainIdx, chosenDomain } });
     
     // 访客模式不写入历史
-    if (!isMock) {
-      let userId;
-      try {
-        const payload = getJwtPayload();
-        userId = payload?.userId;
-        if (userId) {
-          // 用户已登录：检查配额并创建邮箱
-          const { getCachedUserQuota } = await import('./cacheHelper.js');
-          const quota = await getCachedUserQuota(db, userId);
-          if (quota.used >= quota.limit) {
-            logger.warn({ logId, action: 'generate_email', error: 'quota_exceeded', userId, quota });
-            return new Response('已达到邮箱创建上限', { status: 429 });
-          }
-          // 创建并分配邮箱
-          await assignMailboxToUser(db, { userId, address: email });
-          logger.info({ logId, action: 'generate_email', result: { userId, email, quotaUsed: quota.used + 1 } });
-        } else {
-          // 访客模式：直接创建邮箱（不分配）
-          await getOrCreateMailboxId(db, email);
-          logger.info({ logId, action: 'generate_email', result: { anonymous: true, email } });
-        }
-      } catch (e) {
-        // 如果是邮箱上限错误，返回更明确的提示
-        if (String(e?.message || '').includes('已达到邮箱上限')) {
-          logger.warn({ logId, action: 'generate_email', error: 'quota_exceeded', message: e.message });
+    let userId;
+    try {
+      const payload = getJwtPayload();
+      userId = payload?.userId;
+      if (userId) {
+        // 用户已登录：检查配额并创建邮箱
+        const { getCachedUserQuota } = await import('./cacheHelper.js');
+        const quota = await getCachedUserQuota(db, userId);
+        if (quota.used >= quota.limit) {
+          logger.warn({ logId, action: 'generate_email', error: 'quota_exceeded', userId, quota });
           return new Response('已达到邮箱创建上限', { status: 429 });
         }
-        logger.error({ logId, action: 'generate_email', error: e.message, stack: e.stack });
-        return new Response(String(e?.message || '生成失败'), { status: 400 });
+        // 创建并分配邮箱
+        await assignMailboxToUser(db, { userId, address: email });
+        logger.info({ logId, action: 'generate_email', result: { userId, email, quotaUsed: quota.used + 1 } });
+      } else {
+        // 访客模式：直接创建邮箱（不分配）
+        await getOrCreateMailboxId(db, email);
+        logger.info({ logId, action: 'generate_email', result: { anonymous: true, email } });
       }
-    } else {
-      logger.debug({ logId, action: 'generate_email', mode: 'mock', email });
+    } catch (e) {
+      // 如果是邮箱上限错误，返回更明确的提示
+      if (String(e?.message || '').includes('已达到邮箱上限')) {
+        logger.warn({ logId, action: 'generate_email', error: 'quota_exceeded', message: e.message });
+        return new Response('已达到邮箱创建上限', { status: 429 });
+      }
+      logger.error({ logId, action: 'generate_email', error: e.message, stack: e.stack });
+      return new Response(String(e?.message || '生成失败'), { status: 400 });
     }
     return Response.json({ email, expires: Date.now() + 3600000 });
   }
 
   // ================= 用户管理接口（仅非演示模式） =================
-  if (!isMock && path === '/api/users' && request.method === 'GET') {
+  if (path === '/api/users' && request.method === 'GET') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'get_users', status: 'forbidden', message: '非严格管理员尝试访问用户列表' });
       return new Response('Forbidden', { status: 403 });
@@ -328,7 +212,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && path === '/api/users' && request.method === 'POST') {
+  if (path === '/api/users' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'create_user', status: 'forbidden', message: '非严格管理员尝试创建用户' });
       return new Response('Forbidden', { status: 403 });
@@ -358,7 +242,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && request.method === 'PATCH' && path.startsWith('/api/users/')) {
+  if (request.method === 'PATCH' && path.startsWith('/api/users/')) {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'update_user', status: 'forbidden', message: '非严格管理员尝试更新用户' });
       return new Response('Forbidden', { status: 403 });
@@ -375,6 +259,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       if (typeof body.role === 'string') {fields.role = (body.role === 'admin' ? 'admin' : 'user');}
       if (typeof body.can_send !== 'undefined') {fields.can_send = body.can_send ? 1 : 0;}
       if (typeof body.password === 'string' && body.password) { fields.password_hash = await sha256Hex(String(body.password)); }
+      if (typeof body.telegram_chat_id === 'string') {fields.telegram_chat_id = body.telegram_chat_id.trim() || null;}
+      if (typeof body.telegram_username === 'string') {fields.telegram_username = body.telegram_username.trim() || null;}
       
       logger.info({ logId, action: 'update_user', params: { userId: id, fields } });
       
@@ -387,7 +273,51 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && request.method === 'DELETE' && path.startsWith('/api/users/')) {
+  if (path === '/api/user/telegram' && request.method === 'GET') {
+    try {
+      const payload = getJwtPayload();
+      const uid = Number(payload?.userId || 0);
+      if (!uid) {
+        return new Response('未登录', { status: 401 });
+      }
+      const { results } = await db.prepare('SELECT telegram_chat_id, telegram_username FROM users WHERE id = ? LIMIT 1').bind(uid).all();
+      const row = (results && results.length) ? results[0] : {};
+      return Response.json({
+        telegram_chat_id: row.telegram_chat_id || null,
+        telegram_username: row.telegram_username || null
+      });
+    } catch (e) {
+      logger.error({ logId, action: 'get_user_telegram', error: e.message, stack: e.stack });
+      return new Response('查询失败', { status: 500 });
+    }
+  }
+
+  if (path === '/api/user/telegram' && request.method === 'POST') {
+    try {
+      const payload = getJwtPayload();
+      const uid = Number(payload?.userId || 0);
+      if (!uid) {
+        return new Response('未登录', { status: 401 });
+      }
+      if (payload?.role === 'guest') {
+        return new Response('演示账户无权修改设置', { status: 403 });
+      }
+      const body = await request.json();
+      const chatId = String(body.telegram_chat_id || '').trim();
+      const username = String(body.telegram_username || '').trim();
+      await updateUser(db, uid, {
+        telegram_chat_id: chatId || null,
+        telegram_username: username || null
+      });
+      logger.info({ logId, action: 'update_user_telegram', result: { userId: uid, chatId, username } });
+      return Response.json({ success: true });
+    } catch (e) {
+      logger.error({ logId, action: 'update_user_telegram', error: e.message, stack: e.stack });
+      return new Response('更新失败', { status: 500 });
+    }
+  }
+
+  if (request.method === 'DELETE' && path.startsWith('/api/users/')) {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'delete_user', status: 'forbidden', message: '非严格管理员尝试删除用户' });
       return new Response('Forbidden', { status: 403 });
@@ -409,7 +339,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && path === '/api/users/assign' && request.method === 'POST') {
+  if (path === '/api/users/assign' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'assign_mailbox', status: 'forbidden', message: '非严格管理员尝试分配邮箱' });
       return new Response('Forbidden', { status: 403 });
@@ -432,7 +362,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && path === '/api/users/unassign' && request.method === 'POST') {
+  if (path === '/api/users/unassign' && request.method === 'POST') {
     if (!isStrictAdmin()) {
       logger.warn({ logId, action: 'unassign_mailbox', status: 'forbidden', message: '非严格管理员尝试取消分配邮箱' });
       return new Response('Forbidden', { status: 403 });
@@ -455,7 +385,7 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
-  if (!isMock && request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')) {
+  if (request.method === 'GET' && path.startsWith('/api/users/') && path.endsWith('/mailboxes')) {
     const id = Number(path.split('/')[3]);
     if (!id) {
       logger.warn({ logId, action: 'get_user_mailboxes', error: 'invalid_id', userId: id });
@@ -475,29 +405,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 自定义创建邮箱：{ local, domainIndex }
   if (path === '/api/create' && request.method === 'POST') {
-    if (isMock) {
-      // demo 模式下使用模拟域名（仅内存，不写库）
-      try {
-        const body = await request.json();
-        const local = String(body.local || '').trim().toLowerCase();
-        const valid = /^[a-z0-9._-]{1,64}$/i.test(local);
-        if (!valid) {
-          logger.warn({ logId, action: 'create_custom_mailbox', status: 'bad_request', message: '非法用户名', local });
-          return new Response('非法用户名', { status: 400 });
-        }
-        const domains = MOCK_DOMAINS;
-        const domainIdx = Math.max(0, Math.min(domains.length - 1, Number(body.domainIndex || 0)));
-        const chosenDomain = domains[domainIdx] || domains[0];
-        const email = `${local}@${chosenDomain}`;
-        // 模拟邮箱存在性检查（Mock模式下允许创建任意邮箱）
-        // 在演示模式中不进行存在性检查，允许用户自由创建
-        logger.debug({ logId, action: 'create_custom_mailbox', mode: 'mock', email });
-        return Response.json({ email, expires: Date.now() + 3600000 });
-      } catch (e) { 
-        logger.error({ logId, action: 'create_custom_mailbox', error: e.message, stack: e.stack });
-        return new Response('Bad Request', { status: 400 }); 
-      }
-    }
     try {
       const body = await request.json();
       const local = String(body.local || '').trim().toLowerCase();
@@ -566,10 +473,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 当前用户配额：已用/上限
   if (path === '/api/user/quota' && request.method === 'GET') {
-    if (isMock) {
-      // 演示模式：模拟超级管理员，显示系统邮箱数
-      return Response.json({ used: 0, limit: 999999, isAdmin: true });
-    }
     try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
@@ -606,9 +509,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 发件记录列表（按发件人地址过滤）
   if (path === '/api/sent' && request.method === 'GET') {
-    if (isMock) {
-      return Response.json([]);
-    }
     const from = url.searchParams.get('from') || url.searchParams.get('mailbox') || '';
     if (!from) { return new Response('缺少 from 参数', { status: 400 }); }
     try {
@@ -630,10 +530,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 发件记录列表
   if (path === '/api/user/sent' && request.method === 'GET') {
-    if (isMock) {
-      // 演示模式：返回空列表
-      return Response.json({ sent: [] });
-    }
     try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
@@ -668,17 +564,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   // 发件详情
   if (request.method === 'GET' && path.startsWith('/api/sent/')) {
     const sentId = path.substring('/api/sent/'.length);
-    if (isMock) {
-      // 演示模式：返回模拟数据
-      return Response.json({
-        id: sentId,
-        subject: '演示邮件主题',
-        content: '这是演示邮件的正文内容',
-        from_address: 'demo@example.com',
-        to_address: 'recipient@example.com',
-        created_at: new Date().toISOString()
-      });
-    }
     try {
       const payload = getJwtPayload();
       const uid = Number(payload?.userId || 0);
@@ -734,11 +619,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   
   // 发送单封邮件
   if (path === '/api/send' && request.method === 'POST') {
-    if (isMock) {
-      logger.debug({ logId, action: 'send_email', mode: 'mock' });
-      return new Response('演示模式不可发送', { status: 403 });
-    }
-    
     // 空值守卫：检查 RESEND_API_KEY 配置
     if (!RESEND_API_KEY) {
       logger.error({ logId, action: 'send_email', error: 'resend_api_key_missing', status: 501 });
@@ -757,6 +637,23 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       sendPayload = await request.json();
       logger.info({ logId, action: 'send_email', params: { from: sendPayload.from, to: sendPayload.to, subject: sendPayload.subject } });
+      const payloadUser = getJwtPayload();
+      const uidForSend = Number(payloadUser?.userId || 0);
+      if (uidForSend) {
+        const userRateLimit = checkCustomRateLimit(`send_user:${uidForSend}`, 'send:user');
+        if (userRateLimit && userRateLimit.status) {
+          logger.warn({ logId, action: 'send_email', error: 'rate_limited_user', userId: uidForSend, status: userRateLimit.status });
+          return new Response(userRateLimit.body, { status: userRateLimit.status, headers: userRateLimit.headers });
+        }
+      }
+      const fromAddr = String(sendPayload.from || '').trim().toLowerCase();
+      if (fromAddr) {
+        const fromRateLimit = checkCustomRateLimit(`send_from:${fromAddr}`, 'send:from');
+        if (fromRateLimit && fromRateLimit.status) {
+          logger.warn({ logId, action: 'send_email', error: 'rate_limited_from', from: fromAddr, status: fromRateLimit.status });
+          return new Response(fromRateLimit.body, { status: fromRateLimit.status, headers: fromRateLimit.headers });
+        }
+      }
       
       // 使用智能发送，根据发件人域名自动选择API密钥
       const result = await sendEmailWithAutoResend(RESEND_API_KEY, sendPayload);
@@ -782,11 +679,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 批量发送
   if (path === '/api/send/batch' && request.method === 'POST') {
-    if (isMock) {
-      logger.debug({ logId, action: 'send_batch', mode: 'mock' });
-      return new Response('演示模式不可发送', { status: 403 });
-    }
-    
     // 空值守卫：检查 RESEND_API_KEY 配置
     if (!RESEND_API_KEY) {
       logger.error({ logId, action: 'send_batch', error: 'resend_api_key_missing', status: 501 });
@@ -805,6 +697,23 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       
       items = await request.json();
       logger.info({ logId, action: 'send_batch', params: { batchSize: items.length, firstFrom: items[0]?.from, firstTo: items[0]?.to } });
+      const payloadUser = getJwtPayload();
+      const uidForBatch = Number(payloadUser?.userId || 0);
+      if (uidForBatch) {
+        const userBatchRateLimit = checkCustomRateLimit(`send_user:${uidForBatch}`, 'send:user');
+        if (userBatchRateLimit && userBatchRateLimit.status) {
+          logger.warn({ logId, action: 'send_batch', error: 'rate_limited_user', userId: uidForBatch, status: userBatchRateLimit.status });
+          return new Response(userBatchRateLimit.body, { status: userBatchRateLimit.status, headers: userBatchRateLimit.headers });
+        }
+      }
+      const firstFrom = String(items[0]?.from || '').trim().toLowerCase();
+      if (firstFrom) {
+        const fromBatchRateLimit = checkCustomRateLimit(`send_from:${firstFrom}`, 'send:from');
+        if (fromBatchRateLimit && fromBatchRateLimit.status) {
+          logger.warn({ logId, action: 'send_batch', error: 'rate_limited_from', from: firstFrom, status: fromBatchRateLimit.status });
+          return new Response(fromBatchRateLimit.body, { status: fromBatchRateLimit.status, headers: fromBatchRateLimit.headers });
+        }
+      }
       
       // 使用智能批量发送，自动按域名分组并使用对应的API密钥
       const result = await sendBatchWithAutoResend(RESEND_API_KEY, items);
@@ -843,11 +752,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 查询发送结果
   if (path.startsWith('/api/send/') && request.method === 'GET') {
-    if (isMock) {
-      logger.debug({ logId, action: 'get_send_result', mode: 'mock', sendId: path.split('/')[3] });
-      return new Response('演示模式不可查询真实发送', { status: 403 });
-    }
-    
     // 空值守卫：检查 RESEND_API_KEY 配置
     if (!RESEND_API_KEY) {
       logger.error({ logId, action: 'get_send_result', error: 'resend_api_key_missing', status: 501 });
@@ -868,11 +772,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 更新（修改定时/状态等）
   if (path.startsWith('/api/send/') && request.method === 'PATCH') {
-    if (isMock) {
-      logger.debug({ logId, action: 'update_send', mode: 'mock', sendId: path.split('/')[3] });
-      return new Response('演示模式不可操作', { status: 403 });
-    }
-    
     // 空值守卫：检查 RESEND_API_KEY 配置
     if (!RESEND_API_KEY) {
       logger.error({ logId, action: 'update_send', error: 'resend_api_key_missing', status: 501 });
@@ -905,11 +804,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 取消发送
   if (path.startsWith('/api/send/') && path.endsWith('/cancel') && request.method === 'POST') {
-    if (isMock) {
-      logger.debug({ logId, action: 'cancel_send', mode: 'mock', sendId: path.split('/')[3] });
-      return new Response('演示模式不可操作', { status: 403 });
-    }
-    
     // 空值守卫：检查 RESEND_API_KEY 配置
     if (!RESEND_API_KEY) {
       logger.error({ logId, action: 'cancel_send', error: 'resend_api_key_missing', status: 501 });
@@ -931,10 +825,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 删除发件记录
   if (request.method === 'DELETE' && path.startsWith('/api/sent/')) {
-    if (isMock) {
-      logger.debug({ logId, action: 'delete_sent_record', mode: 'mock', sentId: path.split('/')[3] });
-      return new Response('演示模式不可操作', { status: 403 });
-    }
     const id = path.split('/')[3];
     logger.info({ logId, action: 'delete_sent_record', sentId: id });
     try {
@@ -959,13 +849,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       return new Response('缺少 mailbox 参数', { status: 400 });
     }
     try {
-      if (isMock) {
-        logger.debug({ logId, action: 'get_emails', mode: 'mock', mailbox });
-        return Response.json(buildMockEmails(6));
-      }
       const normalized = extractEmail(mailbox).trim().toLowerCase();
       
       logger.info({ logId, action: 'get_emails', params: { mailbox: normalized } });
+      const mailboxKey = normalized || '';
+      const mailboxRateLimit = checkCustomRateLimit(`mailbox_read:${mailboxKey}`, 'mailbox:read');
+      if (mailboxRateLimit && mailboxRateLimit.status) {
+        logger.warn({ logId, action: 'get_emails', error: 'rate_limited_mailbox', mailbox: normalized, status: mailboxRateLimit.status });
+        return new Response(mailboxRateLimit.body, { status: mailboxRateLimit.status, headers: mailboxRateLimit.headers });
+      }
       
       // 纯读：不存在则返回空数组，不创建
       const mailboxId = await getMailboxIdByAddress(db, normalized);
@@ -1023,18 +915,13 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   if (path === '/api/emails/batch' && request.method === 'GET') {
     try {
       const idsParam = String(url.searchParams.get('ids') || '').trim();
-      if (!idsParam) {return Response.json([]);}
+      if (!idsParam) {return Response.json([]);} 
       const ids = idsParam.split(',').map(s=>parseInt(s,10)).filter(n=>Number.isInteger(n) && n > 0);
-      if (!ids.length) {return Response.json([]);}
+      if (!ids.length) {return Response.json([]);} 
       
       // 优化：限制批量查询数量，避免单次查询过多行
       if (ids.length > 50) {
         return new Response('单次最多查询50封邮件', { status: 400 });
-      }
-      
-      if (isMock) {
-        const arr = ids.map(id => buildMockEmailDetail(id));
-        return Response.json(arr);
       }
       
       // 邮箱用户只能查看近24小时的邮件
@@ -1075,9 +962,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
     const domain = String(url.searchParams.get('domain') || '').trim().toLowerCase();
     const canLoginParam = String(url.searchParams.get('can_login') || '').trim();
-    if (isMock) {
-      return Response.json(buildMockMailboxes(limit, offset, mailDomains));
-    }
     // 超级管理员（严格管理员）可查看全部；其他仅查看自身绑定
     try {
       if (isStrictAdmin()) {
@@ -1166,14 +1050,74 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
         LIMIT ? OFFSET ?
       `).bind(...bindParams).all();
       return Response.json(results || []);
-    } catch (_) {
+    } catch (e) {
+      void e;
       return Response.json([]);
+    }
+  }
+
+  // 管理员获取域名统计
+  if (path === '/api/admin/stats/domains' && request.method === 'GET') {
+    if (!isStrictAdmin()) { return new Response('Forbidden', { status: 403 }); }
+    try {
+      const { getDomainStats } = await import('./database.js');
+      const stats = await getDomainStats(db);
+      return Response.json(stats);
+    } catch (e) {
+      logger.error({ logId, action: 'get_domain_stats', error: e.message });
+      return new Response('查询失败', { status: 500 });
+    }
+  }
+
+  if (path === '/api/admin/blocked-senders' && request.method === 'GET') {
+    if (!isStrictAdmin()) { return new Response('Forbidden', { status: 403 }); }
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200);
+    const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
+    try {
+      const list = await listBlockedSenders(db, limit, offset);
+      return Response.json(list || []);
+    } catch (e) {
+      logger.error({ logId, action: 'list_blocked_senders', error: e.message, stack: e.stack });
+      return new Response('查询失败', { status: 500 });
+    }
+  }
+
+  if (path === '/api/admin/blocked-senders' && request.method === 'POST') {
+    if (!isStrictAdmin()) { return new Response('Forbidden', { status: 403 }); }
+    try {
+      const body = await request.json();
+      const pattern = String(body.pattern || '').trim().toLowerCase();
+      const type = body.type === 'domain' ? 'domain' : 'email';
+      const reason = typeof body.reason === 'string' ? body.reason.trim() || null : null;
+      if (!pattern) {
+        return new Response('缺少 pattern 参数', { status: 400 });
+      }
+      const row = await addBlockedSender(db, pattern, type, reason);
+      return Response.json(row || { success: true });
+    } catch (e) {
+      logger.error({ logId, action: 'add_blocked_sender', error: e.message, stack: e.stack });
+      return new Response('创建失败', { status: 500 });
+    }
+  }
+
+  if (path.startsWith('/api/admin/blocked-senders/') && request.method === 'DELETE') {
+    if (!isStrictAdmin()) { return new Response('Forbidden', { status: 403 }); }
+    const idStr = path.split('/')[4];
+    const id = Number(idStr || 0);
+    if (!id) {
+      return new Response('无效ID', { status: 400 });
+    }
+    try {
+      const deleted = await deleteBlockedSender(db, id);
+      return Response.json({ success: true, deleted });
+    } catch (e) {
+      logger.error({ logId, action: 'delete_blocked_sender', error: e.message, stack: e.stack, id });
+      return new Response('删除失败', { status: 500 });
     }
   }
 
   // 重置某个邮箱的密码为默认（邮箱本身）——仅严格管理员
   if (path === '/api/mailboxes/reset-password' && request.method === 'POST') {
-    if (isMock) {return Response.json({ success: true, mock: true });}
     try {
       if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
       const address = String(url.searchParams.get('address') || '').trim().toLowerCase();
@@ -1185,7 +1129,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 切换邮箱置顶状态
   if (path === '/api/mailboxes/pin' && request.method === 'POST') {
-    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
     const address = url.searchParams.get('address');
     if (!address) {return new Response('缺少 address 参数', { status: 400 });}
     const payload = getJwtPayload();
@@ -1216,7 +1159,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 切换邮箱登录权限（仅严格管理员可用）
   if (path === '/api/mailboxes/toggle-login' && request.method === 'POST') {
-    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
     if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
@@ -1243,7 +1185,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 修改邮箱密码（仅严格管理员可用）
   if (path === '/api/mailboxes/change-password' && request.method === 'POST') {
-    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
     if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
@@ -1274,7 +1215,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 批量切换邮箱登录权限（仅严格管理员可用）
   if (path === '/api/mailboxes/batch-toggle-login' && request.method === 'POST') {
-    if (isMock) {return new Response('演示模式不可操作', { status: 403 });}
     if (!isStrictAdmin()) {return new Response('Forbidden', { status: 403 });}
     try {
       const body = await request.json();
@@ -1394,7 +1334,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 删除邮箱（及其所有邮件）
   if (path === '/api/mailboxes' && request.method === 'DELETE') {
-    if (isMock) {return new Response('演示模式不可删除', { status: 403 });}
     const raw = url.searchParams.get('address');
     if (!raw) {return new Response('缺少 address 参数', { status: 400 });}
     const normalized = String(raw || '').trim().toLowerCase();
@@ -1455,7 +1394,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   // 下载 EML（从 R2 获取）- 必须在通用邮件详情处理器之前
   if (request.method === 'GET' && path.startsWith('/api/email/') && path.endsWith('/download')) {
-    if (options.mockOnly) {return new Response('演示模式不可下载', { status: 403 });}
     const id = path.split('/')[3];
     const { results } = await db.prepare('SELECT r2_bucket, r2_object_key FROM messages WHERE id = ?').bind(id).all();
     const row = (results || [])[0];
@@ -1492,10 +1430,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
 
   if (request.method === 'GET' && path.startsWith('/api/email/')) {
     const emailId = path.split('/')[3];
-    if (isMock) {
-      logger.debug({ logId, action: 'get_email_detail', mode: 'mock', emailId });
-      return Response.json(buildMockEmailDetail(emailId));
-    }
     
     logger.info({ logId, action: 'get_email_detail', params: { emailId, isMailboxOnly } });
     
@@ -1571,7 +1505,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   }
 
   if (request.method === 'DELETE' && path.startsWith('/api/email/')) {
-    if (isMock) {return new Response('演示模式不可删除', { status: 403 });}
     const emailId = path.split('/')[3];
     
     if (!emailId || !Number.isInteger(parseInt(emailId))) {
@@ -1606,7 +1539,6 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   }
 
   if (request.method === 'DELETE' && path === '/api/emails') {
-    if (isMock) {return new Response('演示模式不可清空', { status: 403 });}
     const mailbox = url.searchParams.get('mailbox');
     if (!mailbox) {
       logger.warn('清空邮件失败: 缺少mailbox参数', { logId, action: 'clear_emails', status: 400 });
@@ -1640,9 +1572,52 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     }
   }
 
+  // Toggle message pin status
+  if (path.startsWith('/api/emails/') && path.endsWith('/pin') && request.method === 'POST') {
+    
+    // Extract ID: /api/emails/123/pin
+    const parts = path.split('/');
+    const messageId = parseInt(parts[3], 10);
+    
+    if (!messageId) {
+      return new Response('Invalid message ID', { status: 400 });
+    }
+    
+    try {
+      const body = await request.json();
+      const isPinned = !!body.is_pinned;
+      
+      const payload = getJwtPayload();
+      
+      // Auth check
+      if (!isStrictAdmin()) {
+        // Mailbox user check
+        const mailboxId = payload?.mailboxId;
+        if (!mailboxId) {
+          return new Response('Unauthorized', { status: 401 });
+        }
+        
+        // Verify ownership
+        const msg = await db.prepare('SELECT mailbox_id FROM messages WHERE id = ?').bind(messageId).first();
+        if (!msg) {
+          return new Response('Message not found', { status: 404 });
+        }
+        if (msg.mailbox_id !== mailboxId) {
+          return new Response('Forbidden', { status: 403 });
+        }
+      }
+      
+      const success = await setMessagePinned(db, messageId, isPinned);
+      return Response.json({ success, is_pinned: isPinned });
+      
+    } catch (e) {
+      logger.error('Pin message failed', { error: e.message });
+      return new Response('Failed to pin message', { status: 500 });
+    }
+  }
+
   // ================= 邮箱密码管理 =================
   if (path === '/api/mailbox/password' && request.method === 'PUT') {
-    if (isMock) {return new Response('演示模式不可修改密码', { status: 403 });}
     
     try {
       const body = await request.json();
@@ -1716,9 +1691,16 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
   return new Response('未找到 API 路径', { status: 404 });
 }
 
-export async function handleEmailReceive(request, db, env) {
+export async function handleEmailReceive(requestOrData, db, env) {
   try {
-    const emailData = await request.json();
+    let emailData;
+    // 支持直接传入数据对象或 Request 对象
+    if (requestOrData && typeof requestOrData.json === 'function') {
+      emailData = await requestOrData.json();
+    } else {
+      emailData = requestOrData;
+    }
+
     const to = String(emailData?.to || '');
     const from = String(emailData?.from || '');
     const subject = String(emailData?.subject || '(无主题)');
@@ -1727,6 +1709,15 @@ export async function handleEmailReceive(request, db, env) {
 
     const mailbox = extractEmail(to);
     const sender = extractEmail(from);
+    const blocked = await isSenderBlocked(db, sender);
+    if (blocked) {
+      return new Response('Blocked', { status: 204 });
+    }
+    const mailboxKey = String(mailbox || '').trim().toLowerCase();
+    const receiveRateLimit = checkCustomRateLimit(`receive_mailbox:${mailboxKey}`, 'receive:mailbox');
+    if (receiveRateLimit && receiveRateLimit.status) {
+      return new Response(receiveRateLimit.body, { status: receiveRateLimit.status, headers: receiveRateLimit.headers });
+    }
     const mailboxId = await getOrCreateMailboxId(db, mailbox);
 
     // 构造简易 EML 并写入 R2（即便没有原始 raw 也生成便于详情查看）
@@ -1793,6 +1784,10 @@ export async function handleEmailReceive(request, db, env) {
     let verificationCode = '';
     try {
       verificationCode = extractVerificationCode({ subject, text, html });
+      if (!verificationCode) {
+        // 如果未找到验证码，尝试提取登录链接
+        verificationCode = extractLoginLink({ text, html });
+      }
     } catch (err) { void err; }
 
     // 直接使用标准列名插入（表结构已在初始化时固定）
@@ -1809,6 +1804,47 @@ export async function handleEmailReceive(request, db, env) {
       'mail-eml',
       objectKey || ''
     ).run();
+
+    try {
+      await cleanupOldMessages(db, 60);
+    } catch (err) { void err; }
+
+    try {
+      let targetChatIds = [];
+      try {
+        const { results } = await db.prepare(
+          'SELECT u.telegram_chat_id FROM users u JOIN user_mailboxes um ON um.user_id = u.id JOIN mailboxes m ON m.id = um.mailbox_id WHERE m.id = ? AND u.telegram_chat_id IS NOT NULL'
+        ).bind(mailboxId).all();
+        targetChatIds = (results || []).map(function(row) { return String(row.telegram_chat_id); });
+      } catch (e) {
+        logger.error('查询用户 Telegram 绑定失败', e);
+      }
+
+      if (!targetChatIds.length && env.TELEGRAM_CHAT_ID) {
+        targetChatIds = [String(env.TELEGRAM_CHAT_ID)];
+      }
+
+      if (env.TELEGRAM_BOT_TOKEN && targetChatIds.length) {
+        const previewText = (text || '').slice(0, 200);
+        const baseMsg =
+          '<b>📬 新邮件 #email</b>\n\n' +
+          '<b>📤 发件人:</b> ' + escapeHtml(from) + '\n' +
+          '<b>📥 收件人:</b> ' + escapeHtml(to) + '\n' +
+          '<b>📋 主题:</b> ' + escapeHtml(subject) + '\n' +
+          (verificationCode ? '<b>🔑 验证码:</b> <code>' + escapeHtml(verificationCode) + '</code>\n' : '') +
+          '\n' + escapeHtml(previewText) + (previewText.length < (text || '').length ? '...' : '');
+
+        for (const cid of targetChatIds) {
+          try {
+            await sendTelegramMessage({ TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID: cid }, baseMsg);
+          } catch (e) {
+            logger.error('Telegram notification failed', e);
+          }
+        }
+      }
+    } catch (notifyErr) {
+      logger.error('Telegram notification wrapper failed', notifyErr);
+    }
 
     return Response.json({ success: true });
   } catch (error) {

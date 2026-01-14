@@ -27,7 +27,7 @@
    # 在 wrangler.toml 中启用
    [analytics_engine]
    binding = "ANALYTICS"
-   dataset = "temp_email_analytics"
+   dataset = "temp_mail_analytics"
    ```
 
 2. **自定义日志事件**

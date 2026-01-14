@@ -36,9 +36,9 @@
 ```bash
 # 首次部署时执行
 # 本地环境
-wrangler d1 execute TEMP_MAIL_DB --local --file=./d1-init.sql
+wrangler d1 execute temp_mail_db --local --file=./d1-init.sql
 # 远程生产环境
-wrangler d1 execute TEMP_MAIL_DB --remote --file=./d1-init.sql
+wrangler d1 execute temp_mail_db --remote --file=./d1-init.sql
 # 或使用 npm 脚本（推荐）
 npm run d1:execute:local
 npm run d1:execute:remote

@@ -1,5 +1,5 @@
-name = "temp-email"
-main = "worker.js"
+name = "temp-mail"
+main = "src/server.js"
 compatibility_date = "2026-01-11"
 
 # 兼容性标志 - 启用 Node.js 兼容性（用于某些 npm 包）
@@ -20,8 +20,8 @@ compatibility_flags = ["nodejs_compat"]
 
 # D1 数据库绑定（Wrangler v4 语法）
 [[d1_databases]]
-binding = "temp_email_db"
-database_name = "temp_email_db"
+binding = "temp_mail_db"
+database_name = "temp_mail_db"
 database_id = "${D1_DATABASE_ID}"
 # CI/本地需提供 D1_DATABASE_ID；占位未替换将导致运行时无绑定
 
@@ -72,3 +72,5 @@ port = 8787
 # RESEND_API_KEY = "${RESEND_API_KEY}"
 # ADMIN_USERNAME = "${ADMIN_USERNAME}"
 # ADMIN_PASSWORD = "${ADMIN_PASSWORD}"
+# TELEGRAM_BOT_TOKEN = "${TELEGRAM_BOT_TOKEN}"
+# TELEGRAM_CHAT_ID = "${TELEGRAM_CHAT_ID}"

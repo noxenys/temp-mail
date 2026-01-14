@@ -15,8 +15,8 @@ async function preDeployCheck() {
         console.log('📋 检查数据库状态...');
         const dbList = execSync('npx wrangler d1 list', { encoding: 'utf8' });
         
-        if (!dbList.includes('temp_email_db')) {
-            console.log('❌ 数据库 temp_email_db 不存在');
+        if (!dbList.includes('temp_mail_db')) {
+            console.log('❌ 数据库 temp_mail_db 不存在');
             console.log('💡 建议运行: node database-recovery.js');
             process.exit(1);
         }
@@ -25,7 +25,7 @@ async function preDeployCheck() {
         
         // 2. 检查表结构
         console.log('🗃️  检查数据库表结构...');
-        const tableCheck = execSync('npx wrangler d1 execute temp_email_db --command="SELECT name FROM sqlite_master WHERE type=\"table\";"', { encoding: 'utf8' });
+        const tableCheck = execSync('npx wrangler d1 execute temp_mail_db --command="SELECT name FROM sqlite_master WHERE type=\"table\";"', { encoding: 'utf8' });
         
         const requiredTables = ['mailboxes', 'messages', 'domains', 'attachments'];
         const existingTables = tableCheck.match(/\| ([a-z_]+) \|/g)?.map(t => t.replace(/\| ([a-z_]+) \|/, '$1')) || [];
@@ -34,7 +34,7 @@ async function preDeployCheck() {
         
         if (missingTables.length > 0) {
             console.log('❌ 缺少必要的表:', missingTables.join(', '));
-            console.log('💡 建议运行: npx wrangler d1 execute temp_email_db --file=./d1-init.sql');
+            console.log('💡 建议运行: npx wrangler d1 execute temp_mail_db --file=./d1-init.sql');
             process.exit(1);
         }
         
@@ -44,8 +44,8 @@ async function preDeployCheck() {
         console.log('🔧 检查环境变量配置...');
         try {
             const envCheck = execSync('npx wrangler secret list', { encoding: 'utf8' });
-            if (!envCheck.includes('TEMP_MAIL_DB_ID')) {
-                console.log('⚠️  环境变量 TEMP_MAIL_DB_ID 未设置，但数据库存在，可以继续部署');
+            if (!envCheck.includes('D1_DATABASE_ID')) {
+                console.log('⚠️  环境变量 D1_DATABASE_ID 未设置，但数据库存在，可以继续部署');
             } else {
                 console.log('✅ 环境变量已配置');
             }
@@ -71,10 +71,10 @@ function checkWranglerConfig() {
         const fs = require('fs');
         const tomlContent = fs.readFileSync('wrangler.toml', 'utf8');
         
-        // 检查 binding 必须为 temp_email_db
+        // 检查 binding 必须为 temp_mail_db
         const bindingMatch = tomlContent.match(/binding\s*=\s*"([^"]+)"/);
-        if (!bindingMatch || bindingMatch[1] !== 'temp_email_db') {
-            console.error('❌ wrangler.toml 中 D1 数据库 binding 必须为 "temp_email_db"');
+        if (!bindingMatch || bindingMatch[1] !== 'temp_mail_db') {
+            console.error('❌ wrangler.toml 中 D1 数据库 binding 必须为 "temp_mail_db"');
             console.error('💡 请修改 wrangler.toml 中的 [[d1_databases]] binding 配置');
             process.exit(1);
         }

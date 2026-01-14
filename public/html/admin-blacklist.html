@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="precheck-hide">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>黑名单管理 - Temp-Mail</title>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <style>.precheck-hide body{ visibility: hidden !important; }</style>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+    <script src="/js/auth-guard.js" defer></script>
+    <script>
+      (function(){
+        fetch('/api/session', { headers: { 'Cache-Control': 'no-cache' } })
+          .then(r => r.ok ? r.json() : Promise.reject('unauth'))
+          .then(s => {
+            // Only strict admin (or admin role with correct name) can manage blacklist
+            if (s && (s.strictAdmin || (s.role === 'admin' && (s.username === '__root__' || s.username === 'admin')))){
+              try{ document.documentElement.classList.remove('precheck-hide'); }catch(_){ }
+              return;
+            }
+            location.replace('/');
+          })
+          .catch(() => {
+            if (window.AuthGuard) { window.AuthGuard.goLoading('/html/admin-blacklist.html', '正在校验权限…'); }
+            else { location.replace('/templates/loading.html?redirect=%2Fhtml%2Fadmin-blacklist.html'); }
+          });
+      })();
+    </script>
+    <style>
+      /* Simple additions for blacklist page */
+      .form-group { margin-bottom: 1rem; }
+      .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+      .form-input, .form-select { width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.375rem; }
+      .btn-danger { background-color: #ef4444; color: white; }
+      .btn-danger:hover { background-color: #dc2626; }
+      .tag { padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+      .tag-email { background-color: #dbeafe; color: #1e40af; }
+      .tag-domain { background-color: #fce7f3; color: #9d174d; }
+    </style>
+  </head>
+  <body class="admin-page">
+    <div class="topbar">
+      <div class="brand">
+        <span class="brand-icon">🛡️</span>
+        <span>Temp-Mail - 黑名单管理</span>
+      </div>
+      <div class="nav-actions">
+        <a href="/html/admin.html" class="btn btn-ghost" title="返回用户管理">
+          <span>👥</span>
+          <span>用户管理</span>
+        </a>
+        <button id="logout" class="btn btn-secondary" title="退出登录">
+          <span>👋</span>
+          <span>退出登录</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="admin-container">
+      <div class="admin-left">
+        <div class="card">
+          <h2><span class="card-icon">🚫</span><span>添加黑名单</span></h2>
+          <form id="add-form">
+            <div class="form-group">
+              <label class="form-label">匹配模式 (Pattern)</label>
+              <input type="text" id="pattern" class="form-input" placeholder="例如: spam@bad.com 或 bad.com" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">类型 (Type)</label>
+              <select id="type" class="form-select">
+                <option value="email">Email (精确匹配)</option>
+                <option value="domain">Domain (域名匹配)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">原因 (Reason)</label>
+              <input type="text" id="reason" class="form-input" placeholder="备注原因">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%">添加拦截规则</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-main">
+        <div class="card">
+          <div class="card-header">
+            <h2><span class="card-icon">📋</span><span>黑名单列表</span></h2>
+            <button id="refresh-btn" class="btn btn-ghost btn-sm">
+              <span>🔄</span>
+              <span>刷新</span>
+            </button>
+          </div>
+          <div id="loading" class="loading-indicator" style="display:none">
+            <div class="spinner"></div>
+            <span>加载中…</span>
+          </div>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>模式</th>
+                  <th>类型</th>
+                  <th>原因</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="list-body">
+                <!-- Data goes here -->
+              </tbody>
+            </table>
+            <div id="empty-state" class="state-empty" style="display:none; padding: 2rem;">
+              <span style="font-size: 2rem; margin-bottom: 0.5rem;">🍃</span>
+              <span>暂无黑名单记录</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+      // Simple inline script for logic
+      const els = {
+        form: document.getElementById('add-form'),
+        listBody: document.getElementById('list-body'),
+        refreshBtn: document.getElementById('refresh-btn'),
+        loading: document.getElementById('loading'),
+        empty: document.getElementById('empty-state'),
+        logout: document.getElementById('logout')
+      };
+
+      // Toast utils (copied simplified)
+      function showToast(msg, type='info') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = `toast toast-${type} show`;
+        setTimeout(() => t.classList.remove('show'), 3000);
+      }
+
+      async function loadList() {
+        els.loading.style.display = 'flex';
+        els.listBody.innerHTML = '';
+        els.empty.style.display = 'none';
+        try {
+          const res = await fetch('/api/admin/blocked-senders?limit=100');
+          if (!res.ok) throw new Error(res.statusText);
+          const list = await res.json();
+          renderList(list);
+        } catch (e) {
+          showToast('加载失败: ' + e.message, 'error');
+        } finally {
+          els.loading.style.display = 'none';
+        }
+      }
+
+      function renderList(list) {
+        if (!list || !list.length) {
+          els.empty.style.display = 'flex';
+          return;
+        }
+        els.listBody.innerHTML = list.map(item => `
+          <tr>
+            <td>${item.id}</td>
+            <td style="font-family:monospace">${escapeHtml(item.pattern)}</td>
+            <td><span class="tag tag-${item.type}">${item.type}</span></td>
+            <td>${escapeHtml(item.reason || '-')}</td>
+            <td style="color:#64748b; font-size:0.875rem">${new Date(item.created_at).toLocaleString()}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteItem(${item.id})">删除</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      async function deleteItem(id) {
+        if (!confirm('确定要删除这条规则吗？')) return;
+        try {
+          const res = await fetch(`/api/admin/blocked-senders/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            showToast('已删除', 'success');
+            loadList();
+          } else {
+            showToast('删除失败', 'error');
+          }
+        } catch (e) {
+          showToast('网络错误', 'error');
+        }
+      }
+
+      // Init
+      els.refreshBtn.addEventListener('click', loadList);
+      els.logout.addEventListener('click', () => {
+        fetch('/api/logout', { method: 'POST' }).then(() => location.href = '/');
+      });
+
+      els.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pattern = document.getElementById('pattern').value.trim();
+        const type = document.getElementById('type').value;
+        const reason = document.getElementById('reason').value.trim();
+        if (!pattern) return;
+
+        try {
+          const res = await fetch('/api/admin/blocked-senders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pattern, type, reason })
+          });
+          if (res.ok) {
+            showToast('添加成功', 'success');
+            document.getElementById('pattern').value = '';
+            document.getElementById('reason').value = '';
+            loadList();
+          } else {
+            showToast('添加失败', 'error');
+          }
+        } catch (e) {
+          showToast('网络错误', 'error');
+        }
+      });
+
+      function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      }
+
+      // Global for onclick
+      window.deleteItem = deleteItem;
+
+      loadList();
+    </script>
+  </body>
+</html>

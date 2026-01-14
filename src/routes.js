@@ -1,5 +1,6 @@
  
 import { handleApiRequest, handleEmailReceive } from './apiHandlers.js';
+import { handleTelegramWebhook } from './telegram.js';
 import { createJwt, verifyJwt, buildSessionCookie, verifyMailboxLogin } from './authentication.js';
  
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
@@ -545,6 +546,12 @@ export function createRouter() {
     return handleEmailReceive(request, DB, env);
   });
 
+  // =================== Telegram Webhook ===================
+  router.post('/telegram/webhook', async(context) => {
+    const { request, env, DB } = context;
+    return await handleTelegramWebhook(request, env, DB);
+  });
+
   return router;
 }
 
@@ -579,10 +586,9 @@ async function delegateApiRequest(context) {
   const RESEND_API_KEY = env.RESEND_API_KEY || env.RESEND_TOKEN || env.RESEND || '';
   const ADMIN_NAME = String(env.ADMIN_NAME || 'admin').trim().toLowerCase();
 
-  // 访客只允许读取模拟数据
+  // 访客模式
   if ((authPayload.role || 'admin') === 'guest') {
     return handleApiRequest(request, DB, MAIL_DOMAINS, { 
-      mockOnly: true, 
       resendApiKey: RESEND_API_KEY, 
       adminName: ADMIN_NAME, 
       r2: env.MAIL_EML, 
@@ -593,7 +599,6 @@ async function delegateApiRequest(context) {
   // 邮箱用户只能访问自己的邮箱数据
   if (authPayload.role === 'mailbox') {
     return handleApiRequest(request, DB, MAIL_DOMAINS, { 
-      mockOnly: false, 
       resendApiKey: RESEND_API_KEY, 
       adminName: ADMIN_NAME, 
       r2: env.MAIL_EML, 
@@ -603,7 +608,6 @@ async function delegateApiRequest(context) {
   }
   
   return handleApiRequest(request, DB, MAIL_DOMAINS, { 
-    mockOnly: false, 
     resendApiKey: RESEND_API_KEY, 
     adminName: ADMIN_NAME, 
     r2: env.MAIL_EML, 

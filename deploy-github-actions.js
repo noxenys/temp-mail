@@ -9,8 +9,8 @@ import { readFileSync, writeFileSync } from 'fs';
 console.log('🚀 开始 GitHub Actions 部署流程...');
 
 // 数据库配置
-const DATABASE_NAME = 'temp_email_db';
-const DATABASE_BINDING = 'TEMP_MAIL_DB';
+const DATABASE_NAME = 'temp_mail_db';
+const DATABASE_BINDING = 'temp_mail_db';
 
 async function updateWranglerConfig(databaseId) {
   // 检查是否存在 wrangler.toml 文件
@@ -45,7 +45,7 @@ async function updateWranglerConfig(databaseId) {
     console.log('ℹ️ 未找到 wrangler.toml 文件，创建新的配置文件');
     
     // 创建新的 wrangler.toml 文件
-    const wranglerConfig = `name = "temp-email"
+    const wranglerConfig = `name = "temp-mail"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
@@ -57,7 +57,7 @@ binding = "${DATABASE_BINDING}"
 
 # 生产环境配置
 [env.production]
-name = "temp-email"
+name = "temp-mail"
 
 # 生产环境D1数据库配置
 [[env.production.d1_databases]]

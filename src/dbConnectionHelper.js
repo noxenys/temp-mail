@@ -20,9 +20,8 @@ export function getDatabase(env) {
 
   // 简化的数据库绑定名称白名单（按优先级排序）
   const allowedBindings = [
-    'temp_email_db',     // 首选 temp_email_db，因 wrangler.toml 当前绑定名为 temp_email_db
-    'temp_mail_db',      // 兼容性绑定名称（仅作兼容回退）
-    'DB'                 // 兼容性绑定名称（仅作兼容回退）
+    'temp_mail_db',      // 首选 temp_mail_db
+    'DB'                 // 兼容性保留
   ];
 
   // 遍历白名单中的绑定名称
@@ -37,7 +36,6 @@ export function getDatabase(env) {
         // 首次找到时打印明确的绑定选择日志
         if (_cachedBindingName !== bindingName) {
           console.log(`✅ 数据库绑定已选择: ${bindingName}`);
-          console.log('📝 提示: 推荐在 wrangler.toml 中使用 TEMP_MAIL_DB 作为绑定名称');
           _cachedBindingName = bindingName;
         }
         _cachedDB = db;
@@ -52,7 +50,6 @@ export function getDatabase(env) {
   console.error('❌ 未找到有效的D1数据库绑定');
   console.error('🔧 请检查 wrangler.toml 配置，确保已正确设置以下绑定之一:');
   console.error('   - temp_mail_db (推荐)');
-  console.error('   - temp_email_db (当前配置)');
   console.error('   - DB (兼容性)');
   console.error('📖 参考文档: 查看 README.md 中的部署配置说明');
   return null;
@@ -75,9 +72,6 @@ export async function validateDatabaseConnection(db) {
     return false;
   }
 }
-
-// 缓存验证结果，避免重复验证
-const _validationCache = new Map();
 
 /**
  * 获取数据库连接并进行验证

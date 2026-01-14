@@ -1,5 +1,5 @@
 -- Cloudflare D1 数据库初始化脚本
--- 首次部署时执行：wrangler d1 execute DB --file=./d1-init.sql
+-- 首次部署时执行：wrangler d1 execute temp_mail_db --file=./d1-init.sql
 
 -- 安全配置：启用外键约束和严格模式
 PRAGMA foreign_keys = ON;
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS messages (
   subject TEXT NOT NULL,
   verification_code TEXT,
   preview TEXT,
-  r2_bucket TEXT NOT NULL DEFAULT 'temp_email_eml',
+  r2_bucket TEXT NOT NULL DEFAULT 'temp-mail-eml',
   r2_object_key TEXT NOT NULL DEFAULT '',
   received_at TEXT DEFAULT CURRENT_TIMESTAMP,
   is_read INTEGER DEFAULT 0,
@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'user',
   can_send INTEGER NOT NULL DEFAULT 0,
   mailbox_limit INTEGER NOT NULL DEFAULT 10,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  telegram_chat_id TEXT,
+  telegram_username TEXT
 );
 
 -- 用户-邮箱关联表

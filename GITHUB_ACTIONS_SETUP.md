@@ -9,15 +9,15 @@
 
 本项目提供两种互补的部署方式：
 
-#### 1. **GitHub Actions 一键部署** (`ci.yml`)
-- **用途**：通过GitHub Actions自动部署到Cloudflare Workers
-- **触发条件**：push到main分支或手动触发
-- **需要配置**：GitHub Secrets (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
+#### 1. **GitHub Actions 一键部署**（本仓库内置 `ci.yml`）
+- **用途**：通过 GitHub Actions 自动部署到 Cloudflare Workers
+- **触发条件**：push 到 main 分支或在 Actions 中手动触发
+- **需要配置**：GitHub Secrets（至少 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`）
 
-#### 2. **Cloudflare 一键部署** (`deploy.yml`)
-- **用途**：通过Cloudflare的"Deploy with Workers"功能部署
-- **触发条件**：用户在Cloudflare控制台点击部署按钮
-- **需要配置**：无需GitHub Secrets，Cloudflare平台直接处理
+#### 2. **Cloudflare 控制台一键部署（Deploy with Workers 按钮）**
+- **用途**：在 Cloudflare Dashboard 中通过 "Deploy to Workers" 按钮从 Git 仓库部署
+- **触发条件**：用户在 Cloudflare 控制台点击部署按钮
+- **需要配置**：在 Cloudflare 控制台中完成 Git 集成和环境变量配置（本仓库不包含 `deploy.yml` 文件）
 
 ### 解决方案
 

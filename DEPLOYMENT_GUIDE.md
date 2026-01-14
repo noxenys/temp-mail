@@ -27,20 +27,16 @@
 **步骤：**
 1. **克隆项目**：
 ```bash
-git clone https://github.com/noxenys/temp-email.git
-cd temp-email
+git clone https://github.com/noxenys/temp-mail.git
+cd temp-mail
 ```
 
-2. **设置环境变量**：
+2. **在终端设置 Cloudflare 相关环境变量**：
+> 下面以 bash 为例，Windows PowerShell 请使用 `$env:VAR="value"` 形式。
+
 ```bash
-# 创建 .env 文件（基于 .env.example）
-cp .env.example .env
-```
-
-编辑 `.env` 文件：
-```env
-CLOUDFLARE_API_TOKEN=你的API Token
-CLOUDFLARE_ACCOUNT_ID=你的账户ID
+export CLOUDFLARE_API_TOKEN="你的API Token"
+export CLOUDFLARE_ACCOUNT_ID="你的账户ID"
 ```
 
 3. **一键部署**：

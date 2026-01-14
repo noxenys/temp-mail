@@ -395,6 +395,89 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
 }
 
 /**
+ * 从邮件中提取登录/验证链接
+ * @param {object} params - 提取参数对象
+ * @returns {string} 提取的链接，未找到返回空字符串
+ */
+export function extractLoginLink({ text = '', html = '' } = {}) {
+  const textBody = String(text || '');
+  const htmlBody = String(html || '');
+
+  // 1. 尝试从 HTML 中提取带有特定关键词的按钮/链接
+  // 匹配 <a ... href="...">...</a>
+  const linkRe = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1[^>]*>(.*?)<\/a>/gi;
+  let match;
+  
+  // 关键词：登录、验证、确认、Login、Verify、Confirm、Sign in
+  const btnKeywords = /登录|验证|确认|Login|Verify|Confirm|Sign\s?in/i;
+  
+  // 优先查找按钮文字匹配的链接
+  while ((match = linkRe.exec(htmlBody)) !== null) {
+    const href = match[2];
+    const linkText = match[3];
+    // 去除 HTML 标签后的纯文本
+    const cleanText = linkText.replace(/<[^>]+>/g, '').trim();
+    
+    if (btnKeywords.test(cleanText)) {
+      // 检查链接是否包含 http/https
+      if (href.match(/^https?:\/\//i)) {
+        // 排除常见的非验证链接（如主页、隐私政策等）
+        if (!isLikelyPublicLink(href)) {
+          return decodeHtmlEntities(href);
+        }
+      }
+    }
+  }
+
+  // 2. 如果 HTML 中未找到明确按钮，尝试从文本或 HTML 中提取包含 token/code/auth 等敏感参数的 URL
+  // 简单的 URL 提取正则
+  const urlRe = /https?:\/\/[^\s<>"'()]+/gi;
+  const candidates = [];
+  
+  const scanText = (textBody + ' ' + htmlBody);
+  let urlMatch;
+  while ((urlMatch = urlRe.exec(scanText)) !== null) {
+    candidates.push(urlMatch[0]);
+  }
+
+  // 敏感参数关键词
+  const authParams = /[?&](token|code|key|auth|magic|secret|v|verify)=/i;
+  const authPath = /\/(verify|confirm|auth|login|magic)\b/i;
+
+  for (const url of candidates) {
+    if ((authParams.test(url) || authPath.test(url)) && !isLikelyPublicLink(url)) {
+      // 简单的清理，去除末尾可能的标点
+      return cleanUrl(url);
+    }
+  }
+
+  return '';
+}
+
+function isLikelyPublicLink(url) {
+  const u = url.toLowerCase();
+  // 排除社交媒体、隐私政策、主页等
+  if (u.includes('unsubscribe') || u.includes('privacy') || u.includes('terms') || 
+      u.includes('facebook.com') || u.includes('twitter.com') || u.includes('linkedin.com') ||
+      u.includes('instagram.com') || u.endsWith('.png') || u.endsWith('.jpg') || u.endsWith('.css') || u.endsWith('.js')) {
+    return true;
+  }
+  return false;
+}
+
+function decodeHtmlEntities(str) {
+  return str.replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, '\'');
+}
+
+function cleanUrl(url) {
+  return url.replace(/[.,;>)]+$/, '');
+}
+
+/**
  * 判断数字是否可能不是验证码（用于过滤误匹配）
  * @param {string} digits - 提取的数字
  * @param {string} context - 上下文文本
