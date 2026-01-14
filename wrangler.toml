@@ -69,6 +69,7 @@ port = 8787
 
 # 环境变量（通过 wrangler secret 设置）
 # [vars]
+# MAIL_DOMAIN = "example.com"
 # RESEND_API_KEY = "${RESEND_API_KEY}"
 # ADMIN_USERNAME = "${ADMIN_USERNAME}"
 # ADMIN_PASSWORD = "${ADMIN_PASSWORD}"

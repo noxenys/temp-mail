@@ -242,18 +242,19 @@ body::before{
 }
 
 .btn-ghost{
-  background: transparent;
-  color: var(--text-light);
-  border: 1px dashed rgba(226, 232, 240, 0.6);
-  box-shadow: none;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
 }
 
 .btn-ghost:hover{
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px solid var(--primary);
   color: var(--primary);
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.15);
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
 }
 
 .container{
@@ -270,12 +271,12 @@ body::before{
 .sidebar{
   position: sticky;
   top: 120px;
-  background: var(--card-glass);
+  background: rgba(255, 255, 255, 0.9); /* 提高不透明度，增加对比 */
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius);
   border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-glass);
+  box-shadow: var(--shadow-lg); /* 增强阴影，增加层次感 */
   padding: 24px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   width: auto;
@@ -299,10 +300,11 @@ body::before{
   padding: 8px 12px;
   border: 1px solid var(--border-glass);
   border-radius: 10px;
-  background: var(--card-glass);
+  background: #fff; /* 纯白背景提高对比度 */
   box-shadow: var(--shadow-glass);
+  color: var(--text);
 }
-.sidebar-search-input::placeholder{ color: var(--muted2); }
+.sidebar-search-input::placeholder{ color: var(--text-muted); opacity: 0.8; }
 .sidebar-search-input:focus{ outline:none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.15); background: #fff; }
 
 /* 更细、更透明的滚动条（Chromium/WebKit） */

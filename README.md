@@ -1,4 +1,4 @@
-﻿﻿﻿﻿# 📧 Temp-Mail - 现代化临时邮箱服务
+﻿﻿# 📧 Temp-Mail - 现代化临时邮箱服务
 
 # 📋 目录
 - [项目概述](#-项目概述)
@@ -141,14 +141,19 @@
 
 1. 完成一键部署向导后，进入 Worker 详情页：`Workers & Pages → 你的 Worker → Settings → Variables`。
 2. 在 **Environment Variables / Secrets** 中按下面的最小配置填写：
-   - **必填**（否则无法正常登录或收信）：
+   - **运行时必填**（否则无法正常登录或收信）：
      - `MAIL_DOMAIN`：用于生成临时邮箱的域名列表（如 `example.com` 或 `example.com,domain2.com`）。
      - `JWT_SECRET`：JWT 会话签名密钥（随机字符串，越长越好）。
    - **强烈建议配置**：
      - `ADMIN_PASSWORD`：后台严格管理员登录密码（默认用户名为 `ADMIN_NAME` 或 `admin`）。
      - `JWT_TOKEN`：根管理员令牌（便于你用脚本/调试工具以超管身份调用 API）。
    - **可选**（发件、转发、Telegram 等扩展功能）：
-     - `RESEND_API_KEY` / `RESEND_TOKEN` / `RESEND`、`FORWARD_RULES`、`GUEST_PASSWORD`、`TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID` 等。
+     - `TELEGRAM_BOT_TOKEN`：Telegram Bot Token（用于 Bot 服务）。
+     - `TELEGRAM_CHAT_ID`：接收 Bot 通知的 Chat ID（用于安全校验和通知）。
+     - `RESEND_API_KEY`：Resend 发信 API 密钥。
+     - `FORWARD_RULES`：邮件转发规则配置（JSON或KV格式）。
+     - `GUEST_PASSWORD`：访客访问密码（如需开启访客演示模式）。
+     - `ADMIN_NAME`：自定义管理员用户名（默认为 `admin`）。
 
 > ✅ Cloudflare 一键部署 **不需要配置 `D1_DATABASE_ID`**，D1 绑定会由界面或后续脚本自动完成；完整变量说明请参考下文《环境变量配置》章节。
 
@@ -158,13 +163,23 @@
 
 **步骤：**
 - Fork 仓库到你的 GitHub 账户
-- 在 Fork 仓库 Settings → Secrets and variables → Actions 添加以下 Secrets（至少前五项）：
-  - `CLOUDFLARE_API_TOKEN`
-  - `CLOUDFLARE_ACCOUNT_ID`
-  - `MAIL_DOMAIN`
-  - `ADMIN_PASSWORD`
-  - `JWT_TOKEN`
-  - 可选：`ADMIN_NAME`、`GUEST_PASSWORD`、`RESEND_API_KEY` 或 `RESEND_TOKEN`、`FORWARD_RULES`
+- 在 Fork 仓库 Settings → Secrets and variables → Actions 添加以下 Secrets：
+  - **CI/CD 必填**（用于自动部署）：
+    - `CLOUDFLARE_API_TOKEN`：具有 Workers 和 D1 编辑权限的 API 令牌。
+    - `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 账户 ID。
+  - **运行时必填**（写入 Worker 环境变量）：
+    - `MAIL_DOMAIN`：用于生成临时邮箱的域名列表（如 `example.com` 或 `example.com,domain2.com`）。
+    - `JWT_SECRET`：JWT 会话签名密钥（随机字符串，越长越好）。
+  - **强烈建议配置**：
+    - `ADMIN_PASSWORD`：后台严格管理员登录密码（默认用户名为 `ADMIN_NAME` 或 `admin`）。
+    - `JWT_TOKEN`：根管理员令牌（便于你用脚本/调试工具以超管身份调用 API）。
+  - **可选**（发件、转发、Telegram 等扩展功能）：
+    - `TELEGRAM_BOT_TOKEN`：Telegram Bot Token（用于 Bot 服务）。
+    - `TELEGRAM_CHAT_ID`：接收 Bot 通知的 Chat ID（用于安全校验和通知）。
+    - `RESEND_API_KEY`：Resend 发信 API 密钥。
+    - `FORWARD_RULES`：邮件转发规则配置（JSON或KV格式）。
+    - `GUEST_PASSWORD`：访客访问密码（如需开启访客演示模式）。
+    - `ADMIN_NAME`：自定义管理员用户名（默认为 `admin`）。
 - 打开 Actions，选择"Manual Deploy (Workers)"并运行工作流
 - 首次部署后，系统会自动检测并初始化数据库（如尚未初始化）。如需手动初始化数据库：运行 `npm run d1:execute-basic:remote`
 - 在 Cloudflare Email Routing 中添加 catch‑all，并绑定到该 Worker

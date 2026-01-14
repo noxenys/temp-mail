@@ -390,6 +390,18 @@
   min-width: 0;
 }
 
+/* 确保右侧卡片有最小高度，避免空状态下塌陷 */
+.admin-right .card {
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 列表容器占满剩余空间 */
+.user-mailboxes {
+  flex: 1;
+}
+
 /* 卡片头部布局 */
 .card-header {
   display: flex;
