@@ -2520,6 +2520,16 @@ select:disabled{
   font-weight: 500;
 }
 
+.select option{
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark){
+  .select option{
+    color: #e5e7eb;
+  }
+}
+
 .select:focus{
   outline: none;
   border-color: var(--primary);
