@@ -110,6 +110,7 @@ try {
   const envVars = [
     // 必需环境变量
     { name: 'ADMIN_PASSWORD', value: process.env.ADMIN_PASSWORD },
+    { name: 'GUEST_PASSWORD', value: process.env.GUEST_PASSWORD },
     { name: 'JWT_TOKEN', value: process.env.JWT_TOKEN },
     { name: 'JWT_SECRET', value: process.env.JWT_SECRET },
     { name: 'MAIL_DOMAIN', value: process.env.MAIL_DOMAIN },
@@ -119,7 +120,6 @@ try {
     { name: 'ADMIN_NAME', value: process.env.ADMIN_NAME },
     { name: 'ADMIN_USERNAME', value: process.env.ADMIN_USERNAME },
     { name: 'ADMIN_PASS', value: process.env.ADMIN_PASS },
-    { name: 'GUEST_PASSWORD', value: process.env.GUEST_PASSWORD },
     { name: 'RESEND_API_KEY', value: process.env.RESEND_API_KEY },
     { name: 'RESEND_TOKEN', value: process.env.RESEND_TOKEN },
     { name: 'RESEND', value: process.env.RESEND },

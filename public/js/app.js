@@ -1,120 +1,9 @@
 import { cacheGet, cacheSet, readPrefetch, setCurrentUserKey, cacheClearForUser, getCurrentUserKey } from './storage.js';
 
-window.__GUEST_MODE__ = false;
-window.__MOCK_STATE__ = { domains: ['example.com'], mailboxes: [], emailsByMailbox: new Map() };
-
 // 若刚从登录页跳转过来，设置的标记用于避免服务端缓存未热导致的循环
 try{ if (sessionStorage.getItem('mf:just_logged_in') === '1'){ sessionStorage.removeItem('mf:just_logged_in'); } }catch(_){ }
 
-async function mockApi(path, options){
-  const url = new URL(path, location.origin);
-  const jsonHeaders = { 'Content-Type': 'application/json' };
-  // domains
-  if (url.pathname === '/api/domains'){
-    return new Response(JSON.stringify(window.__MOCK_STATE__.domains), { headers: jsonHeaders });
-  }
-  // generate
-  if (url.pathname === '/api/generate'){
-    const len = Number(url.searchParams.get('length') || '8');
-    const id = (window.MockData?.mockGenerateId ? window.MockData.mockGenerateId(len) : String(Math.random()).slice(2,10));
-    const domain = window.__MOCK_STATE__.domains[Number(url.searchParams.get('domainIndex')||0)] || 'example.com';
-    const email = `${id}@${domain}`;
-    // 记录至内存历史
-    window.__MOCK_STATE__.mailboxes.unshift({ address: email, created_at: new Date().toISOString().replace('T',' ').slice(0,19), is_pinned: 0 });
-    return new Response(JSON.stringify({ email, expires: Date.now() + 3600000 }), { headers: jsonHeaders });
-  }
-  // emails list
-  if (url.pathname === '/api/emails' && (!options || options.method === undefined || options.method === 'GET')){
-    const mailbox = url.searchParams.get('mailbox') || '';
-    let list = window.__MOCK_STATE__.emailsByMailbox.get(mailbox);
-    if (!list) {
-      const built = window.MockData?.buildMockEmails ? window.MockData.buildMockEmails(6) : [];
-      window.__MOCK_STATE__.emailsByMailbox.set(mailbox, built);
-      list = built;
-    }
-    return new Response(JSON.stringify(list), { headers: jsonHeaders });
-  }
-  // email detail
-  if (url.pathname.startsWith('/api/email/') && (!options || options.method === undefined || options.method === 'GET')){
-    const id = Number(url.pathname.split('/')[3]);
-    const firstMailbox = window.__MOCK_STATE__.emailsByMailbox.keys().next().value;
-    let list = firstMailbox ? window.__MOCK_STATE__.emailsByMailbox.get(firstMailbox) : null;
-    if (!list || !list.length) {
-      const built = window.MockData?.buildMockEmails ? window.MockData.buildMockEmails(6) : [];
-      window.__MOCK_STATE__.emailsByMailbox.set('demo@example.com', built);
-      list = built;
-    }
-    const found = (window.MockData?.buildMockEmailDetail ? window.MockData.buildMockEmailDetail(id) : (list.find(x=>x.id===id) || list[0]));
-    return new Response(JSON.stringify(found), { headers: jsonHeaders });
-  }
-  // mailboxes list
-  if (url.pathname === '/api/mailboxes' && (!options || options.method === undefined || options.method === 'GET')){
-    const mb = window.__MOCK_STATE__.mailboxes.length ? window.__MOCK_STATE__.mailboxes : (window.MockData?.buildMockMailboxes ? window.MockData.buildMockMailboxes(6,0,window.__MOCK_STATE__.domains) : []);
-    if (!window.__MOCK_STATE__.mailboxes.length) window.__MOCK_STATE__.mailboxes = mb;
-    
-    // 按置顶状态和时间排序
-    const sortedMailboxes = mb.sort((a, b) => {
-      // 首先按置顶状态排序（置顶的在前）
-      if (a.is_pinned !== b.is_pinned) {
-        return (b.is_pinned || 0) - (a.is_pinned || 0);
-      }
-      // 然后按创建时间排序（新的在前）
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
-    
-    return new Response(JSON.stringify(sortedMailboxes.slice(0,10)), { headers: jsonHeaders });
-  }
-
-  // toggle pin (demo mode)
-  if (url.pathname === '/api/mailboxes/pin' && options && options.method === 'POST'){
-    const address = url.searchParams.get('address');
-    if (!address) return new Response('缺少 address 参数', { status: 400 });
-    
-    // 在演示模式下，简单地切换置顶状态
-    const mailbox = window.__MOCK_STATE__.mailboxes.find(m => m.address === address);
-    if (mailbox) {
-      mailbox.is_pinned = mailbox.is_pinned ? 0 : 1;
-      return new Response(JSON.stringify({ success: true, is_pinned: mailbox.is_pinned }), { headers: jsonHeaders });
-    }
-    return new Response('邮箱不存在', { status: 404 });
-  }
-
-  // create custom mailbox (demo mode): accept POST /api/create
-  if (url.pathname === '/api/create' && options && options.method === 'POST'){
-    try{
-      const bodyText = options.body || '{}';
-      const body = typeof bodyText === 'string' ? JSON.parse(bodyText || '{}') : (bodyText || {});
-      const local = String((body.local || '').trim());
-      if (!/^[A-Za-z0-9._-]{1,64}$/.test(local)){
-        return new Response('非法用户名', { status: 400 });
-      }
-      const domainIndex = Number(body.domainIndex || 0);
-      const domain = (window.__MOCK_STATE__.domains || ['example.com'])[isNaN(domainIndex)?0:Math.max(0, Math.min((window.__MOCK_STATE__.domains||['example.com']).length-1, domainIndex))] || 'example.com';
-      const email = `${local}@${domain}`;
-      
-      // 检查邮箱是否已存在
-      const existingMailbox = window.__MOCK_STATE__.mailboxes.find(m => m.address === email);
-      if (existingMailbox) {
-        return new Response('邮箱地址已存在，请选择其他用户名', { status: 409 });
-      }
-      
-      const item = { address: email, created_at: new Date().toISOString().replace('T',' ').slice(0,19), is_pinned: 0 };
-      window.__MOCK_STATE__.mailboxes.unshift(item);
-      return new Response(JSON.stringify({ email, expires: Date.now() + 3600000 }), { headers: jsonHeaders });
-    }catch(_){ return new Response('Bad Request', { status: 400 }); }
-  }
-  // destructive operations in demo
-  if ((url.pathname === '/api/emails' && (options?.method === 'DELETE')) ||
-      (url.pathname.startsWith('/api/email/') && (options?.method === 'DELETE')) ||
-      (url.pathname === '/api/mailboxes' && (options?.method === 'DELETE'))){
-    return new Response('演示模式不可操作', { status: 403 });
-  }
-  // default: 404
-  return new Response('Not Found', { status: 404 });
-}
-
 async function api(path, options){
-  if (window.__GUEST_MODE__) return mockApi(path, options);
   const res = await fetch(path, options);
   if (res.status === 401) {
     // 避免重复跳转
@@ -439,11 +328,10 @@ function applySessionUI(s){
       if (s.strictAdmin){ badge.classList.add('role-super'); badge.textContent = '超级管理员'; }
       else if (s.role === 'admin'){ badge.classList.add('role-admin'); badge.textContent = `高级用户：${s.username||''}`; }
       else if (s.role === 'user'){ badge.classList.add('role-user'); badge.textContent = `用户：${s.username||''}`; }
-      else if (s.role === 'guest'){ badge.classList.add('role-user'); badge.textContent = '演示模式'; }
     }
-    if (s && (s.strictAdmin || s.role === 'guest') && adminLink){ adminLink.style.display = 'inline-flex'; } else if (adminLink){ adminLink.style.display = 'none'; }
+    if (s && (s.strictAdmin) && adminLink){ adminLink.style.display = 'inline-flex'; } else if (adminLink){ adminLink.style.display = 'none'; }
     if (allMailboxesLink){
-      if (s && (s.strictAdmin || s.role === 'guest')) allMailboxesLink.style.display = 'inline-flex';
+      if (s && (s.strictAdmin)) allMailboxesLink.style.display = 'inline-flex';
       else allMailboxesLink.style.display = 'none';
     }
   }catch(_){ }
@@ -799,8 +687,7 @@ async function loadDomains(){
     applySessionUI(s);
     if (s.role === 'guest') {
       window.__GUEST_MODE__ = true;
-      window.__MOCK_STATE__ = { domains: ['example.com'], mailboxes: [], emailsByMailbox: new Map() };
-      const bar = document.createElement('div');
+            const bar = document.createElement('div');
       bar.className = 'demo-banner';
       bar.innerHTML = '👀 当前为 <strong>观看模式</strong>（模拟数据，仅演示）。要接收真实邮件，请自建部署或联系部署。';
       document.body.prepend(bar);

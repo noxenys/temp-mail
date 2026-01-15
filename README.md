@@ -8,22 +8,23 @@
 - [🏗️ 系统架构](#️-系统架构)
 - [🚀 部署指南](#-部署指南)
   - [推荐部署方式](#推荐部署方式)
-  - [Cloudflare 一键部署](#方案一cloudflare-一键部署)
-  - [GitHub Actions 自动部署](#方案二github-actions-自动部署推荐生产环境)
-  - [本地一键部署](#方案三本地一键部署)
-- [📧 配置邮件路由](#-配置邮件路由)
+  - [方案一：Cloudflare 一键部署](#方案一cloudflare-一键部署)
+  - [方案二：GitHub Actions 自动部署](#方案二github-actions-自动部署推荐生产环境)
+  - [方案三：本地一键部署](#方案三本地一键部署)
+  - [📧 配置邮件路由](#-配置邮件路由重要)
 - [🛠️ 环境变量配置](#️-环境变量配置)
-- [📁 项目结构](#-项目结构)
-- [🗄️ 数据库结构](#️-数据库结构)
-- [🗂️ Wrangler 配置](#️-wrangler-配置)
-- [🗄️ D1 数据库操作](#️-d1-数据库操作)
-- [📋 API 文档](#-api-文档)
-- [🛡️ 安全特性](#️-安全特性)
-- [🧪 测试与质量保证](#-测试与质量保证)
-- [📊 监控与告警](#-监控与告警)
-- [🔄 CI/CD 自动化](#-cicd-自动化)
+- [👨‍💻 开发者指南](#-开发者指南)
+  - [🗄️ 数据库结构](#️-数据库结构)
+  - [🗂️ Wrangler 配置](#️-wrangler-配置)
+  - [🗄️ D1 数据库操作](#️-d1-数据库操作)
+  - [📋 API 文档](#-api-文档)
+  - [🧪 测试与质量保证](#-测试与质量保证)
+  - [📊 监控与告警](#-监控与告警)
+  - [🔄 CI/CD 自动化](#-cicd-自动化)
+  - [🛡️ 安全特性](#️-安全特性)
 - [❓ 常见问题](#-常见问题)
 - [🔄 版本与路线图](#-版本与路线图)
+  - [🔮 未来路线图 (Roadmap)](#-未来路线图-roadmap)
 - [🤝 贡献](#-贡献)
 - [📄 许可证](#-许可证)
 
@@ -165,14 +166,14 @@ foo123@example.com
 
 # 🚀 部署指南
 
-### 推荐部署方式
+## 推荐部署方式
 
 - 生产环境和长期维护：推荐 **Fork 本仓库 + GitHub Actions 自动部署**，每次更新从上游拉取最新代码后，由 Actions 自动发布到你自己的 Cloudflare 账户。
 - 快速体验与个人使用：可使用下方的 **Cloudflare 一键部署按钮**，在自己的账户下快速创建一个独立实例，适合体验和小规模使用。
 
 > 一键部署创建的 Worker 不会自动跟踪本仓库后续提交。如需持续获得更新，建议 fork 本仓库并使用 GitHub Actions 或本地 wrangler 部署。
 
-### 方案一：Cloudflare 一键部署
+## 方案一：Cloudflare 一键部署
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/noxenys/temp-mail)
 
@@ -190,7 +191,7 @@ foo123@example.com
 
 > ✅ Cloudflare 一键部署 **不需要配置 `D1_DATABASE_ID`**，D1 绑定会由界面或后续脚本自动完成。
 
-### 方案二：GitHub Actions 自动部署（推荐生产环境）
+## 方案二：GitHub Actions 自动部署（推荐生产环境）
 
 适合希望自动同步更新且隐私隔离的用户。无需按钮授权，所有密钥保存在你自己的 Fork 仓库，适合作为**生产环境的主力部署方式**。
 
@@ -212,7 +213,11 @@ foo123@example.com
   - 每次 push 到你的仓库后，GitHub Actions 会重新构建并部署到你自己的 Cloudflare 账户
 - 在 Cloudflare Email Routing 中添加 catch‑all，并绑定到该 Worker
 
-### 方案三：本地一键部署
+> ⚠️ **重要提示**：如果使用 GitHub Actions 部署，请务必在 GitHub 仓库的 **Settings → Secrets and variables** 中配置所有环境变量（包括 `MAIL_DOMAIN`, `JWT_SECRET` 等）。
+>
+> 原因是：GitHub Actions 部署时会覆盖 Cloudflare 控制台中手动设置的环境变量。如果你只在 Cloudflare 控制台修改了变量，下次 Actions 自动部署时，这些修改会被 GitHub Secrets 中的配置（或空值）覆盖。
+
+## 方案三：本地一键部署
 
 如果你希望**在本地终端用 wrangler 部署**，可以使用下面流程：
 
@@ -269,23 +274,23 @@ npm run deploy
 
 | 变量名 | 是否必需 | 作用一句话说明 | 一般在哪里配 |
 | ------ | -------- | --------------- | ------------ |
-| `MAIL_DOMAIN` | 必需 | 用来生成临时邮箱的域名列表 | Cloudflare Worker Variables / GitHub Secrets |
-| `JWT_SECRET` | 必需 | 登录会话签名密钥，所有登录都依赖它 | Cloudflare Worker Secrets / GitHub Secrets |
 | `ADMIN_PASSWORD` | 强烈推荐 | 管理后台严格管理员密码 | Cloudflare Worker Secrets / GitHub Secrets |
+| `JWT_SECRET` | 必需 | 登录会话签名密钥，所有登录都依赖它 | Cloudflare Worker Secrets / GitHub Secrets |
+| `MAIL_DOMAIN` | 必需 | 用来生成临时邮箱的域名列表 | Cloudflare Worker Variables / GitHub Secrets |
 | `ADMIN_NAME` | 可选 | 管理员用户名，默认 `admin` | Cloudflare Worker Variables / GitHub Secrets |
-| `GUEST_PASSWORD` | 可选 | 访客账号 `guest` 的登录密码 | 同上 |
-| `JWT_TOKEN` | 可选 | 根管理员令牌（万能管理密钥，用于脚本/调试） | 同上 |
-| `RESEND_API_KEY` | 可选 | Resend 发件密钥，开启“发件箱”功能 | Cloudflare Worker Secrets / GitHub Secrets |
+| `CACHE_TTL` | 可选 | Worker 内缓存有效期，降低 D1 访问频率 | Cloudflare Worker Variables |
+| `CLOUDFLARE_ACCOUNT_ID` | 部署用 | 指定要操作的 Cloudflare 帐号 | GitHub Secrets / 本地终端环境变量 |
+| `CLOUDFLARE_API_TOKEN` | 部署用 | Cloudflare API Token（在 Dashboard 的 API Tokens 页面生成） | GitHub Secrets / 本地终端环境变量 |
+| `D1_DATABASE_ID` | 部署用 | 绑定到哪个 D1 数据库（只在 CI 脚本中用） | GitHub Secrets |
+| `EMAIL_RETENTION_DAYS` | 可选 | 全局默认邮件保留天数（单个邮箱没配置时用它） | Cloudflare Worker Variables / Secrets |
 | `FORWARD_RULES` | 可选 | 邮件自动转发规则，转发到常用邮箱 | Cloudflare Worker Secrets / Variables |
+| `GUEST_PASSWORD` | 可选 | 访客账号的登录密码（隐藏演示用） | Cloudflare Worker Secrets / GitHub Secrets |
+| `JWT_TOKEN` | 可选 | 根管理员令牌（万能管理密钥，用于脚本/调试） | Cloudflare Worker Secrets / GitHub Secrets |
+| `MAIL_LOCALPART_MIN_LEN` / `MAIL_LOCALPART_MAX_LEN` | 可选 | 随机邮箱前缀长度范围 | Cloudflare Worker Variables |
+| `MAX_EMAIL_SIZE` | 可选预留 | 预留的“单封邮件最大尺寸”配置，当前代码尚未启用限制 | Cloudflare Worker Secrets |
+| `RESEND_API_KEY` | 可选 | Resend 发件密钥，开启“发件箱”功能 | Cloudflare Worker Secrets / GitHub Secrets |
 | `TELEGRAM_BOT_TOKEN` | 可选 | Telegram Bot 的访问令牌 | Cloudflare Worker Secrets |
 | `TELEGRAM_CHAT_ID` | 可选 | 默认接收通知的 Telegram 会话 ID | Cloudflare Worker Variables |
-| `MAIL_LOCALPART_MIN_LEN` / `MAIL_LOCALPART_MAX_LEN` | 可选 | 随机邮箱前缀长度范围 | Cloudflare Worker Variables |
-| `EMAIL_RETENTION_DAYS` | 可选 | 全局默认邮件保留天数（单个邮箱没配置时用它） | Cloudflare Worker Variables / Secrets |
-| `MAX_EMAIL_SIZE` | 可选预留 | 预留的“单封邮件最大尺寸”配置，当前代码尚未启用限制 | Cloudflare Worker Secrets |
-| `CACHE_TTL` | 可选 | Worker 内缓存有效期，降低 D1 访问频率 | Cloudflare Worker Variables |
-| `CLOUDFLARE_API_TOKEN` | 部署用 | Cloudflare API Token（在 Dashboard 的 API Tokens 页面生成） | GitHub Secrets / 本地终端环境变量 |
-| `CLOUDFLARE_ACCOUNT_ID` | 部署用 | 指定要操作的 Cloudflare 帐号 | GitHub Secrets / 本地终端环境变量 |
-| `D1_DATABASE_ID` | 部署用 | 绑定到哪个 D1 数据库（只在 CI 脚本中用） | GitHub Secrets |
 
 > Cloudflare API Token 权限建议：
 > - 在 Cloudflare Dashboard → **My Profile → API Tokens** 中，使用官方模板 **“Edit Cloudflare Workers”** 创建一个新的 Token；
@@ -309,7 +314,7 @@ npm run deploy
 - `JWT_TOKEN`：根管理员令牌（Root Admin Override，可选但推荐配置）
   - 示例：`JWT_TOKEN="your_root_admin_token"`
   - 用途：携带该令牌即可直接以最高管理员身份访问受保护接口，便于脚本/调试
-- `GUEST_PASSWORD`：访客登录密码（可选，启用 guest 账号）
+- `GUEST_PASSWORD`：访客登录密码（可选，配置后启用访客模式）
   - 示例：`GUEST_PASSWORD="guest_access_password"`
   - 用途：为访客账号设置统一密码，用于只读或受限访问
 - `ADMIN_NAME`：严格管理员用户名（默认 `admin`）
@@ -376,76 +381,10 @@ npm run deploy
 3. **智能选择密钥**：使用匹配的API密钥调用Resend API发送邮件
 4. **批量优化**：批量发送时，系统会自动按域名分组，并行处理以提升效率
 
-# 📁 项目结构
 
-```
-temp-mail/
-├── worker.js                 # 构建后的 Worker 入口（由 build.js 生成）
-├── wrangler.toml             # Cloudflare Workers & D1 配置
-├── package.json              # 项目依赖与脚本
-├── d1-init.sql               # 完整数据库初始化脚本
-├── d1-init-basic.sql         # 基础初始化脚本（仅必要表结构）
-├── deploy-with-env.cjs       # 本地一键部署脚本（npm run deploy）
-├── deploy-github-actions.js  # GitHub Actions 部署脚本
-├── DATABASE_SETUP_GUIDE.md   # 数据库配置指南
-├── DEPLOYMENT_GUIDE.md       # 部署方式说明（本地/GitHub Actions）
-├── GITHUB_ACTIONS_SETUP.md   # GitHub Actions 配置详情
-├── LOGIN_SETUP_GUIDE.md      # 登录系统配置说明
-├── docs/                     # 详细文档
-│   ├── api.md                # API 接口文档
-│   ├── v3.md                 # V3 权限与账户体系说明
-│   ├── resend.md             # Resend 发件配置
-│   ├── monitoring-alerts.md  # 监控与告警指南
-│   └── ...                   # 其他技术说明
-├── src/                      # Worker 源码
-│   ├── server.js             # fetch 入口与路由分发
-│   ├── routes.js             # 路由与页面分发
-│   ├── apiHandlers.js        # API 业务处理
-│   ├── database.js           # D1 访问与表结构初始化
-│   ├── dbConnectionHelper.js # 数据库连接辅助
-│   ├── emailParser.js        # 邮件解析与验证码提取
-│   ├── emailSender.js        # Resend 发件逻辑
-│   ├── telegram.js           # Telegram Bot 集成
-│   ├── cacheHelper.js        # 内存缓存与统计缓存
-│   ├── rateLimit.js          # 速率限制逻辑
-│   ├── logger.js             # 结构化日志
-│   └── commonUtils.js        # 工具函数
-├── public/                   # 静态前端资源
-│   ├── index.html            # 根入口（加载应用界面）
-│   ├── html/                 # HTML 页面
-│   │   ├── app.html          # 主应用界面
-│   │   ├── mailboxes.html    # 邮箱总览页面
-│   │   ├── mailbox.html      # 单邮箱用户页面
-│   │   ├── login.html        # 登录页面
-│   │   ├── admin.html        # 管理后台页面
-│   ├── css/                  # 样式文件
-│   │   ├── app.css           # 主样式
-│   │   ├── app-mobile.css    # 移动端专用样式
-│   │   ├── mailbox.css       # 单邮箱页面样式
-│   │   ├── mailboxes.css     # 邮箱总览样式
-│   │   ├── login.css         # 登录页样式
-│   │   ├── admin.css         # 管理后台样式
-│   ├── js/                   # 客户端脚本
-│   │   ├── app.js            # 首页 + 历史邮箱逻辑
-│   │   ├── app-mobile.js     # 移动端专用逻辑
-│   │   ├── mailbox.js        # 邮箱用户页面逻辑
-│   │   ├── mailboxes.js      # 邮箱总览页面逻辑
-│   │   ├── login.js          # 登录逻辑
-│   │   ├── admin.js          # 管理后台逻辑
-│   │   ├── app-router.js     # 前端路由/加载
-│   │   ├── auth-guard.js     # 认证守卫
-│   │   ├── storage.js        # 本地存储管理
-│   │   └── toast-utils.js    # 提示消息工具
-│   ├── templates/            # HTML 模板片段
-│   │   ├── footer.html       # 页脚模板
-│   │   ├── loading.html      # 加载动画模板
-│   │   ├── loading-inline.html # 内联加载动画
-│   │   └── toast.html        # 提示消息模板
-│   ├── favicon.svg           # 网站图标
-└── ...
-```
+# 👨‍💻 开发者指南
 
-# 🗄️ 数据库结构
+## 🗄️ 数据库结构
 
 使用 Cloudflare D1 数据库存储业务数据，核心表结构如下（详见 d1-init.sql）：
 
@@ -475,7 +414,7 @@ temp-mail/
 
 - **blocked_senders** 表：黑名单规则（按邮箱/域名匹配）
 
-# 🗂️ Wrangler 配置
+## 🗂️ Wrangler 配置
 
 使用 Wrangler v4 配置：
 
@@ -492,7 +431,7 @@ database_id = "your-database-id-here"  # 在部署时会被替换
 compatibility_date = "2026-01-11"
 ```
 
-# 🗄️ D1 数据库操作
+## 🗄️ D1 数据库操作
 
 ```bash
 # 初始化远程数据库（创建表结构）
@@ -520,7 +459,7 @@ npx wrangler d1 execute temp_mail_db --local --command="SELECT * FROM mailboxes 
 npx wrangler d1 execute temp_mail_db --local --command="DELETE FROM messages; DELETE FROM mailboxes;"
 ```
 
-# 📋 API 文档
+## 📋 API 文档
 
 ### 根管理员令牌（Root Admin Override）
 
@@ -544,7 +483,7 @@ npx wrangler d1 execute temp_mail_db --local --command="DELETE FROM messages; DE
 - **登录**：`POST /api/login`
 - **获取系统统计**：`GET /api/stats`
 
-# 🛡️ 安全特性
+## 🛡️ 安全特性
 
 - **代码隔离**：所有用户输入都经过严格验证和转义
 - **环境变量保护**：敏感信息通过环境变量管理，不硬编码在代码中
@@ -554,7 +493,7 @@ npx wrangler d1 execute temp_mail_db --local --command="DELETE FROM messages; DE
 - **输入验证**：对所有用户输入进行严格验证和过滤，防止注入攻击
 - **HTTPS 强制**：强制使用 HTTPS 连接，确保数据传输安全
 
-# 🧪 测试与质量保证
+## 🧪 测试与质量保证
 
 ### 运行本地检查
  
@@ -583,7 +522,7 @@ npm run build
 - **类型检查**：通过 TypeScript 做静态类型校验
 - **构建验证**：确保代码能够正确打包并在 Workers 环境运行
 
-# 📊 监控与告警
+## 📊 监控与告警
 
 ### 健康检查建议
  
@@ -597,7 +536,7 @@ npm run build
 - **资源使用告警**：监控数据库和存储使用情况
 - **自定义告警**：根据业务需求配置自定义告警规则
 
-# 🔄 CI/CD 自动化
+## 🔄 CI/CD 自动化
 
 项目配置了 GitHub Actions CI/CD 流水线，实现一键自动化部署：
 ### 部署流程
@@ -629,92 +568,108 @@ npm run build
 **本地/线上环境差异**：
 - 如使用 `${D1_DATABASE_ID}` 占位，需在 CI 或本地 shell 注入该变量
 
+
 # 🔄 版本与路线图
 
-### V1
+## V1
+
 - 前后端基础功能与认证体系
 - 邮箱生成、历史记录、邮件列表与详情、清空/删除
 - 智能验证码提取与复制、一键复制邮件内容
 - 自动刷新与基本的 UI 交互
 
-### V2
-- [x] 前端模板解耦合：将首页 UI 从 `public/app.js` 内联模板拆分为独立的 `public/templates/app.html`，降低耦合、便于维护
-- [x] 发件（Resend）与发件箱：支持通过 Resend 发送邮件、自定义发件显示名（`fromName`）
-- [x] 加邮箱置顶功能，提升用户体验
-- [X] 路由逻辑优化 防止首页泄露
+## V2
 
-### V3
-#### 登录与权限
-- [X] 新增登录系统与三层权限：超级管理员（Strict Admin）/ 高级用户（Admin）/ 普通用户（User）。
-- [X] 默认严格管理员用户名来自 `ADMIN_NAME`（默认 `admin`），密码来自 `ADMIN_PASSWORD`。
+- 前端模板解耦合：将首页 UI 从 `public/app.js` 内联模板拆分为独立的 `public/templates/app.html`，降低耦合、便于维护
+- 发件（Resend）与发件箱：支持通过 Resend 发送邮件、自定义发件显示名（fromName）
+- 邮箱置顶功能：支持将常用邮箱置顶，提升使用体验
+- 路由逻辑优化：防止未授权情况下直接访问首页泄露信息
 
-#### 管理后台（用户管理）
-- [X] 入口：登录后右上角"用户管理"（严格管理员和演示模式默认显示）。
-- [X] 查看用户列表（用户名、角色、是否可发件、邮箱上限/已用、创建时间）。
-- [X] 查看某个用户的邮箱列表。
-- [X] 创建用户（用户名/密码/角色）。
-- [X] 编辑用户（改名、改密码、切换角色、是否允许发件、调整邮箱上限）。
-- [X] 删除用户（不会删除邮箱实体与邮件，仅解除绑定关系）。
-- [X] 分配邮箱给指定用户（支持批量，前端做格式校验）。
+## V3
 
-### V3.5
-#### 性能优化
-- [X] **极大提升响应速度**：优化数据库查询效率，减少延迟，显著改善用户体验
-- [X] **前端资源优化**：减少静态资源加载时间，提升页面渲染速度
+### 登录与权限
 
-#### 存储增强
-- [X] **R2 存储原邮件**：新增 Cloudflare R2 对象存储支持，用于保存邮件原始内容
-- [X] **混合存储策略**：D1 数据库存储邮件元数据，R2 存储完整邮件内容，优化存储成本
+- 新增登录系统与三层权限：超级管理员（Strict Admin）/ 高级用户（Admin）/ 普通用户（User）
+- 严格管理员用户名来自 `ADMIN_NAME`（默认 `admin`），密码来自 `ADMIN_PASSWORD`
 
-#### 移动端适配
-- [X] **手机端完美适配**：全面优化移动设备体验，响应式设计更加流畅
-- [X] **移动端专属界面**：针对手机屏幕优化的界面布局和交互方式
-- [X] **触控优化**：优化触屏操作体验，支持手势操作
+### 管理后台（用户管理）
 
-- [X] 添加支持邮箱单点登陆
-- [X] 添加全局邮箱管理功能，支持限制单个邮箱登陆
-- [X] 添加邮箱搜索功能，便捷寻找指定邮箱
-- [X] 添加随机人名生成邮箱功能
-- [X] 列表和卡片两种展示方式
+- 入口：登录后右上角“用户管理”（严格管理员和演示模式默认显示）
+- 查看用户列表（用户名、角色、是否可发件、邮箱上限/已用、创建时间）
+- 查看某个用户的邮箱列表
+- 创建用户（用户名/密码/角色）
+- 编辑用户（改名、改密码、切换角色、是否允许发件、调整邮箱上限）
+- 删除用户（不会删除邮箱实体与邮件，仅解除绑定关系）
+- 分配邮箱给指定用户（支持批量，前端做格式校验）
 
-### V4.5
-- [X] **多域名发送配置**：支持为不同域名配置不同的Resend API密钥，实现智能发送
-- [X] **配置格式扩展**：支持键值对、JSON、单密钥三种配置格式，兼容旧版配置
-- [X] **智能API选择**：系统根据发件人域名自动选择对应的API密钥进行发送
-- [X] **批量发送优化**：批量发送时自动按域名分组，并行处理提升发送效率
+## V3.5
 
-### V5.0
-- [X] **SQL优化**：大幅降低数据库行读取数，提升查询性能
-- [X] **邮箱管理增强**：添加邮箱管理页面，支持根据域名筛选和登录权限筛选
-- [X] **兼容性升级**：更新至2026-01-11兼容性日期，支持最新Cloudflare Workers特性
-- [X] **性能优化**：优化 HTMLRewriter 使用方式，提升页面渲染性能
-- [X] **现代化UI**：引入CSS变量系统，实现深色模式和主题定制
-- [X] **移动端优化**：全面优化移动端体验，包括专用CSS样式和交互优化
-- [X] **邮箱搜索**：增加邮箱搜索和筛选功能
-- [ ] **邮件归档**：支持邮件归档和标签功能（规划中）
+### 性能优化
 
-### V6.0
-- [X] **风控与反滥用**：新增黑名单系统，支持按邮箱或域名拦截恶意发件人，附带可视化管理面板
-- [X] **重要邮件保护**：新增邮件加星（Pin）功能，被标记的邮件将永久保留，免受自动清理影响
-- [X] **灵活留存策略**：支持为特定邮箱设置自定义的邮件保留时长（retention days）
-- [X] **管理后台升级**：新增独立的黑名单管理页面，优化管理员权限验证逻辑
+- 提升响应速度：优化数据库查询与索引，减少延迟
+- 前端资源优化：减少静态资源加载时间，提升页面渲染速度
 
-### 🔮 未来路线图 (Roadmap)
+### 存储增强
 
-#### 🌟 体验进化 (Experience)
-- [ ] **多语言支持 (i18n)**：支持中/英等多语言界面，服务全球用户
-- [ ] **附件支持**：集成 Cloudflare R2，支持邮件附件的解析、存储与下载
-- [ ] **桌面通知**：基于 Web Push 协议，实现新邮件到达时的系统级弹窗提醒
-- [ ] **AI 辅助**：引入智能分类与回复建议，提升处理效率
+- R2 存储原邮件：新增 Cloudflare R2 对象存储支持，用于保存邮件原始内容
+- 混合存储策略：D1 存元数据，R2 存完整邮件内容，优化成本与性能
 
-#### ⚡ 极客与开发者 (Hardcore)
-- [ ] **Webhook 集成**：支持自定义回调 URL，邮件到达自动推送 JSON，利于自动化测试
-- [ ] **API Key 管理**：提供长效 API 密钥机制，方便脚本调用与第三方集成
-- [ ] **自定义域名**：支持后台动态管理域名列表，无需修改代码重新部署
+### 移动端适配
 
-#### 🛡️ 服务与运营 (Service)
-- [ ] **数据洞察**：构建可视化仪表盘，实时展示系统吞吐、活跃度与健康状态
-- [ ] **邮件互联**：支持灵活的自动转发规则，实现与其他邮箱服务的无缝流转
+- 手机端适配：优化移动设备体验，整体响应式布局更流畅
+- 移动端专属界面：针对手机屏幕的界面布局和交互方式
+- 触控优化：提升触屏操作体验
+- 支持邮箱单点登录
+- 全局邮箱管理：支持限制单个邮箱登录
+- 邮箱搜索：便捷查找指定邮箱
+- 随机人名生成邮箱
+- 列表和卡片两种展示方式
+
+## V4.5
+
+- 多域名发送配置：支持为不同域名配置不同的 Resend API 密钥
+- 配置格式扩展：支持键值对、JSON、单密钥三种配置格式，兼容旧版
+- 智能 API 选择：根据发件人域名自动选择对应密钥
+- 批量发送优化：批量发送时按域名分组并行处理，提升效率
+
+## V5.0
+
+- SQL 优化：降低数据库行读取数，提升查询性能
+- 邮箱管理增强：添加邮箱管理页面，支持按域名和登录权限筛选
+- 兼容性升级：更新至 `2026-01-11` 兼容性日期，支持最新 Workers 特性
+- 性能优化：优化 `HTMLRewriter` 使用方式，提升页面渲染性能
+- 现代化 UI：引入 CSS 变量系统，实现深色模式和主题定制
+- 移动端优化：进一步优化移动端样式与交互
+- 邮箱搜索与筛选：增强邮箱搜索和筛选能力
+- 邮件归档与标签：预留归档和标签能力（规划中）
+
+## V6.0
+
+- 风控与反滥用：新增黑名单系统，支持按邮箱或域名拦截恶意发件人，并提供可视化管理界面
+- 重要邮件保护：新增邮件加星（Pin）功能，被标记的邮件将长期保留，避免被自动清理
+- 灵活留存策略：支持为特定邮箱设置自定义的邮件保留时长（retention days）
+- 管理后台升级：新增独立黑名单管理页面，优化管理员权限验证逻辑
+
+## 🔮 未来路线图 (Roadmap)
+
+### 🌟 体验进化 (Experience)
+
+- 多语言支持（i18n）：支持中/英等多语言界面
+- 附件支持：集成 Cloudflare R2，支持邮件附件解析、存储与下载
+- 桌面通知：基于 Web Push 的新邮件系统通知
+- AI 辅助：智能分类与回复建议
+
+### ⚡ 极客与开发者 (Hardcore)
+
+- Webhook 集成：支持自定义回调 URL，邮件到达自动推送 JSON
+- API Key 管理：提供长效 API 密钥，方便脚本调用与第三方集成
+- 自定义域名：支持后台动态管理域名列表，无需修改代码重新部署
+
+### 🛡️ 服务与运营 (Service)
+
+- 数据洞察：可视化仪表盘，展示系统吞吐、活跃度与健康状态
+- 邮件互联：灵活自动转发规则，与其他邮箱服务无缝流转
+
 
 # 🤝 贡献
 

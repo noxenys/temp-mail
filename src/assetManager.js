@@ -29,7 +29,6 @@ export class AssetManager {
       '/login.js',
       '/login.css',
       '/mailbox.js',
-      '/mock.js', 
       '/favicon.svg', 
       '/route-guard.js',
       '/app-router.js',

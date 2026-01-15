@@ -20,9 +20,10 @@ interface Env {
   RESEND?: string;
   ADMIN_PASSWORD?: string;
   ADMIN_PASS?: string;
+  GUEST_PASSWORD?: string;
   ADMIN_USERNAME?: string;
   ADMIN_NAME?: string;
-  GUEST_PASSWORD?: string;
+
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   CACHE_TTL?: string;

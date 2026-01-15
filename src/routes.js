@@ -365,17 +365,17 @@ export function createRouter() {
         return new Response(JSON.stringify({ success: true, role: 'admin', can_send: 1, mailbox_limit: 9999 }), { headers });
       }
 
-      // 2) 访客：用户名为 guest 且密码匹配 GUEST_PASSWORD
+
+
       if (name === 'guest' && GUEST_PASSWORD && password === GUEST_PASSWORD) {
         logger.info('访客登录验证通过', { logId, action: 'login', username: name, role: 'guest' });
-        
         const token = await createJwt(JWT_TOKEN, { role: 'guest', username: 'guest' });
         const headers = new Headers({ 'Content-Type': 'application/json' });
         headers.set('Set-Cookie', buildSessionCookie(token, request.url));
-        
         logger.info('访客登录成功', { logId, action: 'login', username: name, role: 'guest' });
         return new Response(JSON.stringify({ success: true, role: 'guest' }), { headers });
       }
+
 
       // 3) 普通用户：查询 users 表校验用户名与密码
       try {

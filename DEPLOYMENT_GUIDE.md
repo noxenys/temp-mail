@@ -22,6 +22,9 @@
 - ✅ 无需本地环境
 - ✅ 支持回滚
 
+> ⚠️ **重要提示**：请将所有 Worker 运行时环境变量（如 `MAIL_DOMAIN`, `JWT_SECRET` 等）配置在 GitHub Secrets 中。
+> 每次 Actions 部署都会用 Secrets 中的配置覆盖 Cloudflare 控制台中的设置。如果你只在 Cloudflare 修改了变量，下次部署时会被覆盖！
+
 ### 方案二：本地一键部署
 
 **步骤：**
