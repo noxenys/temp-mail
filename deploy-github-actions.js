@@ -134,7 +134,7 @@ try {
   for (const envVar of envVars) {
     if (envVar.value) {
       try {
-        execSync(`npx wrangler secret put ${envVar.name}`, {
+        execSync(`npx wrangler secret put ${envVar.name} --env=""`, {
           input: envVar.value,
           stdio: ['pipe', 'inherit', 'inherit']
         });
