@@ -539,9 +539,9 @@
 
 /* 左侧用户列表表头优化 */
 .admin-left .table thead th {
-  font-size: 12px;
+  font-size: 14px;
   padding: 10px 6px;
-  color: var(--text);
+  color: #0f172a;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
   border-bottom: 2px solid rgba(59, 130, 246, 0.2);
 }
@@ -571,8 +571,8 @@
 
 .table tbody td {
   padding: 12px 8px;
-  font-size: 13px;
-  color: #334155;
+  font-size: 14px;
+  color: #1e293b;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   font-weight: 500;
   vertical-align: middle;

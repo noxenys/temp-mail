@@ -1165,10 +1165,10 @@ body::before{
   display: flex;
   gap: 4px;
   align-items: center;
-  opacity: 0;
+  opacity: 1;
   transition: var(--transition);
   flex-shrink: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .mailbox-item:hover .mailbox-actions{
