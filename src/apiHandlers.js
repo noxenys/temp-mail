@@ -33,7 +33,7 @@ function escapeHtml(str) {
  * @param {object} options - 配置选项
  * @returns {Promise<Response>} 响应对象
  */
-export async function handleApiRequest(request, db, mailDomains, options = { resendApiKey: '', adminName: '', r2: null, authPayload: null, mailboxOnly: false }) {
+export async function handleApiRequest(request, db, mailDomains, options = { resendApiKey: '', adminName: '', r2: null, authPayload: null, mailboxOnly: false, env: null }) {
   const logId = logger.generateLogId ? logger.generateLogId() : `api-${Date.now()}`;
   const url = new URL(request.url);
   const path = url.pathname;
@@ -47,6 +47,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { res
     query: Object.fromEntries(url.searchParams),
     isMailboxOnly: isMailboxOnly
   }, logId);
+
+  const env = options?.env || {};
 
   // 邮箱用户只能访问特定的API端点和自己的数据
   if (isMailboxOnly) {
@@ -147,6 +149,59 @@ export async function handleApiRequest(request, db, mailDomains, options = { res
     const domains = Array.isArray(mailDomains) ? mailDomains : [(mailDomains || 'temp.example.com')];
     logger.info({ logId, action: 'get_domains', result: { count: domains.length } });
     return Response.json(domains);
+  }
+
+  if (path === '/api/telegram/status' && request.method === 'GET') {
+    try {
+      const payload = options?.authPayload || getJwtPayload();
+      if (!payload) {
+        return new Response('未登录', { status: 401 });
+      }
+      const role = payload.role || 'user';
+      if (role !== 'admin' && role !== 'guest') {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const token = env.TELEGRAM_BOT_TOKEN || '';
+      if (!token) {
+        return Response.json({ enabled: false, reason: 'TELEGRAM_BOT_TOKEN 未配置' });
+      }
+      const apiUrl = `https://api.telegram.org/bot${token}/getWebhookInfo`;
+      let info;
+      try {
+        const resp = await fetch(apiUrl);
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => '');
+          logger.error({ logId, action: 'telegram_get_webhook_info', status: resp.status, body: text });
+          return Response.json({ enabled: true, ok: false, error: `Telegram API HTTP ${resp.status}`, raw: text });
+        }
+        info = await resp.json();
+      } catch (e) {
+        logger.error({ logId, action: 'telegram_get_webhook_info', error: e.message, stack: e.stack });
+        return Response.json({ enabled: true, ok: false, error: String(e?.message || e) });
+      }
+      const result = info && info.result ? info.result : {};
+      const currentUrl = result.url || '';
+      const origin = new URL(request.url).origin;
+      const recommendedUrl = new URL('/telegram/webhook', origin).toString();
+      const lastErrorDate = result.last_error_date || null;
+      const ok = !!currentUrl && !lastErrorDate;
+      return Response.json({
+        enabled: true,
+        ok,
+        url: currentUrl,
+        pendingUpdateCount: result.pending_update_count || 0,
+        lastErrorDate,
+        lastErrorMessage: result.last_error_message || null,
+        ipAddress: result.ip_address || '',
+        hasCustomCertificate: !!result.has_custom_certificate,
+        maxConnections: result.max_connections || null,
+        allowedUpdates: result.allowed_updates || null,
+        recommendedUrl
+      });
+    } catch (e) {
+      logger.error({ logId, action: 'telegram_status', error: e.message, stack: e.stack });
+      return new Response('查询失败', { status: 500 });
+    }
   }
 
   if (path === '/api/generate') {
@@ -1806,7 +1861,8 @@ export async function handleEmailReceive(requestOrData, db, env) {
     ).run();
 
     try {
-      await cleanupOldMessages(db, 60);
+      const globalRetentionDays = Number(env?.EMAIL_RETENTION_DAYS || 60);
+      await cleanupOldMessages(db, globalRetentionDays);
     } catch (err) { void err; }
 
     try {

@@ -46,9 +46,11 @@
 1. 登录Cloudflare控制台
 2. 前往 My Profile → API Tokens
 3. 点击 "Create Token"
-4. 使用 "Edit Cloudflare Workers" 模板
-5. 选择适当的权限范围
-6. 生成并复制Token
+4. 使用 **"Edit Cloudflare Workers"** 模板（推荐为本项目单独创建一个 Token）
+5. 确认权限中至少包含：
+   - Workers：对脚本的读取/编辑/部署权限（模板默认会勾选）
+   - 如需让脚本自动管理 D1 或 R2，可额外勾选 D1 Databases / R2 Storage 的编辑权限
+6. 生成并复制 Token，并将其填入 GitHub Secrets 中的 `CLOUDFLARE_API_TOKEN`
 
 ### 验证部署
 配置完成后，GitHub Actions 应该能够正常部署。您可以通过以下方式验证：

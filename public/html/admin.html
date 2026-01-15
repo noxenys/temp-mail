@@ -122,6 +122,23 @@
         </div>
       </div>
       <div class="admin-right">
+        <div class="card" id="telegram-status-card">
+          <div class="card-header">
+            <h2>
+              <span class="card-icon">📡</span>
+              <span>Telegram 状态</span>
+              <span id="telegram-status-badge" class="badge">检查中</span>
+            </h2>
+            <button id="telegram-status-refresh" class="btn btn-ghost btn-sm" title="重新检查">
+              <span>🔄</span>
+              <span>刷新</span>
+            </button>
+          </div>
+          <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.5">
+            <div id="telegram-status-text">正在检查 Telegram Webhook…</div>
+            <div id="telegram-status-extra" style="margin-top:4px;font-size:12px;color:#64748b;"></div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-header">
             <h2><span class="card-icon">📦</span><span>用户的邮箱列表</span><span id="mailboxes-count" class="mailboxes-count">（0 邮箱）</span></h2>

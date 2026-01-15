@@ -473,7 +473,7 @@
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
   color: #1e293b;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 14px 8px;
@@ -488,8 +488,9 @@
 
 /* 左侧用户列表表头优化 */
 .admin-left .table thead th {
-  font-size: 11px;
+  font-size: 12px;
   padding: 10px 6px;
+  color: var(--text);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
   border-bottom: 2px solid rgba(59, 130, 246, 0.2);
 }
@@ -600,13 +601,13 @@
 }
 .col-mailbox { 
   width: 19%; 
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
 }
 .col-can { 
   width: 14%; 
   text-align: center; 
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .col-created { 
@@ -642,7 +643,7 @@
 .user-actions .btn-ghost {
   background: rgba(100, 116, 139, 0.1);
   border: 1px solid rgba(100, 116, 139, 0.2);
-  color: #475569;
+  color: var(--text-muted);
 }
 
 .user-actions .btn-ghost:hover {
@@ -676,7 +677,7 @@
 
 /* 用户列表专用样式 */
 .admin-left .table tbody td {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 

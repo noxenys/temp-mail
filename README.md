@@ -1,4 +1,4 @@
-﻿# 📧 Temp-Mail - 现代化临时邮箱服务
+# 📧 Temp-Mail - 现代化临时邮箱服务
 
 # 📋 目录
 - [📖 项目概述](#-项目概述)
@@ -88,7 +88,7 @@
 - 启用条件：配置 `TELEGRAM_BOT_TOKEN` 和 `TELEGRAM_CHAT_ID` 环境变量。
 - 核心命令：
   - `/start`：显示欢迎信息和可用命令列表。
-  - `/new [域名]`：创建一个新邮箱（可选指定域名，如 `/new example.com`）。
+  - `/new [域名]`：创建一个新邮箱（可选指定域名，如 `/new example.com`）。未指定时会从当前活跃域名中随机选择后缀。
   - `/list`：查看当前 Telegram 账号绑定的邮箱列表。
   - `/latest [邮箱]`：查看指定邮箱的最新一封邮件（不填时默认取最近的邮箱）。
   - `/code [邮箱]`：快速获取最新邮件中的验证码或登录链接。
@@ -266,6 +266,34 @@ npm run deploy
 - **Worker 运行时变量**：在 Cloudflare Workers 上运行服务时必须/可选的配置。
 - **部署辅助变量**：仅在使用 GitHub Actions 等自动化脚本时需要的变量。
 
+> 如果你只想“照着表填变量”，可以先看这张速查表，再往下看详细解释。
+
+| 变量名 | 是否必需 | 作用一句话说明 | 一般在哪里配 |
+| ------ | -------- | --------------- | ------------ |
+| `MAIL_DOMAIN` | 必需 | 用来生成临时邮箱的域名列表 | Cloudflare Worker Variables / GitHub Secrets |
+| `JWT_SECRET` | 必需 | 登录会话签名密钥，所有登录都依赖它 | Cloudflare Worker Secrets / GitHub Secrets |
+| `ADMIN_PASSWORD` | 强烈推荐 | 管理后台严格管理员密码 | Cloudflare Worker Secrets / GitHub Secrets |
+| `ADMIN_NAME` | 可选 | 管理员用户名，默认 `admin` | Cloudflare Worker Variables / GitHub Secrets |
+| `GUEST_PASSWORD` | 可选 | 访客账号 `guest` 的登录密码 | 同上 |
+| `JWT_TOKEN` | 可选 | 根管理员令牌（万能管理密钥，用于脚本/调试） | 同上 |
+| `RESEND_API_KEY` | 可选 | Resend 发件密钥，开启“发件箱”功能 | Cloudflare Worker Secrets / GitHub Secrets |
+| `FORWARD_RULES` | 可选 | 邮件自动转发规则，转发到常用邮箱 | Cloudflare Worker Secrets / Variables |
+| `TELEGRAM_BOT_TOKEN` | 可选 | Telegram Bot 的访问令牌 | Cloudflare Worker Secrets |
+| `TELEGRAM_CHAT_ID` | 可选 | 默认接收通知的 Telegram 会话 ID | Cloudflare Worker Variables |
+| `MAIL_LOCALPART_MIN_LEN` / `MAIL_LOCALPART_MAX_LEN` | 可选 | 随机邮箱前缀长度范围 | Cloudflare Worker Variables |
+| `EMAIL_RETENTION_DAYS` | 可选 | 全局默认邮件保留天数（单个邮箱没配置时用它） | Cloudflare Worker Variables / Secrets |
+| `MAX_EMAIL_SIZE` | 可选预留 | 预留的“单封邮件最大尺寸”配置，当前代码尚未启用限制 | Cloudflare Worker Secrets |
+| `CACHE_TTL` | 可选 | Worker 内缓存有效期，降低 D1 访问频率 | Cloudflare Worker Variables |
+| `CLOUDFLARE_API_TOKEN` | 部署用 | Cloudflare API Token（在 Dashboard 的 API Tokens 页面生成） | GitHub Secrets / 本地终端环境变量 |
+| `CLOUDFLARE_ACCOUNT_ID` | 部署用 | 指定要操作的 Cloudflare 帐号 | GitHub Secrets / 本地终端环境变量 |
+| `D1_DATABASE_ID` | 部署用 | 绑定到哪个 D1 数据库（只在 CI 脚本中用） | GitHub Secrets |
+
+> Cloudflare API Token 权限建议：
+> - 在 Cloudflare Dashboard → **My Profile → API Tokens** 中，使用官方模板 **“Edit Cloudflare Workers”** 创建一个新的 Token；
+> - 确保至少勾选 Workers 相关的编辑权限（模板会自动带上）；
+> - 如果希望脚本自动管理 D1 数据库 / R2 存储桶，可额外为该 Token 打开对应资源的编辑权限（D1 Databases / R2 Storage），不要勾选与你项目无关的多余权限；
+> - 推荐只为这个项目单独创建一个 Token，避免复用到其他无关服务。
+
 ### Worker 运行时必需变量
 - `MAIL_DOMAIN`：用于生成临时邮箱的域名，支持多个，使用逗号或空格分隔（如 `example.com, domain2.com`）
   - 示例：`MAIL_DOMAIN="example.com,domain2.com"`
@@ -298,6 +326,15 @@ npm run deploy
   - 用途：将收到的邮件自动转发到你的常用邮箱
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`：用于启用 Telegram Bot 登录协助与系统告警推送（可选）
   - 用途：通过 Telegram 接收登录链接、系统异常告警等通知
+- `MAIL_LOCALPART_MIN_LEN` / `MAIL_LOCALPART_MAX_LEN`：邮箱前缀随机长度区间（可选）
+  - 示例：`MAIL_LOCALPART_MIN_LEN="4"`, `MAIL_LOCALPART_MAX_LEN="16"`
+  - 用途：控制生成邮箱的本地部分（@ 前）最小和最大长度。Telegram Bot 等服务在未显式指定长度时，会在该区间内随机选择长度生成前缀。
+- `EMAIL_RETENTION_DAYS`：默认邮件保留天数（天，可选）
+  - 示例：`EMAIL_RETENTION_DAYS="60"`
+  - 用途：作为系统级默认保留天数，当某个邮箱未设置专属保留策略时使用；未配置时默认 60 天
+- `MAX_EMAIL_SIZE`：单封邮件允许的最大大小（字节，可选）
+  - 示例：`MAX_EMAIL_SIZE="1048576"`（约 1MB）
+  - 用途：预留变量，目前代码中尚未启用限制，可用于后续限制单封邮件大小，避免异常大邮件占用资源
 - `CACHE_TTL`：本地缓存 TTL 配置（秒，可选）
   - 示例：`CACHE_TTL="60"`
   - 用途：控制 Worker 内缓存一些查询结果的时间，降低 D1 访问频率

@@ -43,6 +43,10 @@ const els = {
   prevPage: document.getElementById('prev-page'),
   nextPage: document.getElementById('next-page'),
   toast: document.getElementById('toast'),
+  telegramStatusBadge: document.getElementById('telegram-status-badge'),
+  telegramStatusText: document.getElementById('telegram-status-text'),
+  telegramStatusExtra: document.getElementById('telegram-status-extra'),
+  telegramStatusRefresh: document.getElementById('telegram-status-refresh'),
   
   // 检查必要的DOM元素是否存在
   checkRequiredElements() {
@@ -528,6 +532,96 @@ function updateMailboxesPaginationUI() {
   if (els.mailboxesNextPage) {
     els.mailboxesNextPage.disabled = currentMailboxPage >= totalPages;
   }
+}
+
+function setTelegramStatusBadge(state) {
+  if (!els.telegramStatusBadge) return;
+  const el = els.telegramStatusBadge;
+  if (state === 'ok') {
+    el.textContent = '已连接';
+    el.style.background = 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(22,163,74,0.1))';
+    el.style.color = '#16a34a';
+    el.style.borderColor = 'rgba(34,197,94,0.4)';
+  } else if (state === 'warn') {
+    el.textContent = '需关注';
+    el.style.background = 'linear-gradient(135deg, rgba(234,179,8,0.18), rgba(202,138,4,0.12))';
+    el.style.color = '#ca8a04';
+    el.style.borderColor = 'rgba(234,179,8,0.5)';
+  } else if (state === 'error') {
+    el.textContent = '异常';
+    el.style.background = 'linear-gradient(135deg, rgba(248,113,113,0.2), rgba(220,38,38,0.14))';
+    el.style.color = '#dc2626';
+    el.style.borderColor = 'rgba(248,113,113,0.6)';
+  } else if (state === 'disabled') {
+    el.textContent = '未启用';
+    el.style.background = 'linear-gradient(135deg, rgba(148,163,184,0.18), rgba(148,163,184,0.08))';
+    el.style.color = '#64748b';
+    el.style.borderColor = 'rgba(148,163,184,0.5)';
+  } else {
+    el.textContent = '检查中';
+    el.style.background = '';
+    el.style.color = '';
+    el.style.borderColor = '';
+  }
+}
+
+async function loadTelegramStatus() {
+  if (!els.telegramStatusText) return;
+  try {
+    setTelegramStatusBadge('checking');
+    els.telegramStatusText.textContent = '正在检查 Telegram Webhook…';
+    if (els.telegramStatusExtra) els.telegramStatusExtra.textContent = '';
+    const r = await api('/api/telegram/status');
+    const data = await r.json();
+    if (!data || data.enabled === false) {
+      setTelegramStatusBadge('disabled');
+      els.telegramStatusText.textContent = '未配置 Telegram Bot，已跳过 Webhook 检查。';
+      if (els.telegramStatusExtra) {
+        const reason = data && data.reason ? String(data.reason) : '';
+        els.telegramStatusExtra.textContent = reason || '请在 Cloudflare 环境变量中配置 TELEGRAM_BOT_TOKEN。';
+      }
+      return;
+    }
+    if (data.ok) {
+      setTelegramStatusBadge('ok');
+      const url = String(data.url || '');
+      els.telegramStatusText.textContent = 'Telegram Webhook 已连接。';
+      if (els.telegramStatusExtra) {
+        const pending = Number(data.pendingUpdateCount || 0);
+        const parts = [];
+        if (url) parts.push('当前 Webhook: ' + url);
+        parts.push('待处理更新数: ' + pending);
+        els.telegramStatusExtra.textContent = parts.join(' ｜ ');
+      }
+    } else {
+      const hasError = !!data.lastErrorDate || !!data.error;
+      setTelegramStatusBadge(hasError ? 'error' : 'warn');
+      els.telegramStatusText.textContent = hasError ? 'Telegram Webhook 异常。' : 'Telegram Webhook 状态未知。';
+      if (els.telegramStatusExtra) {
+        const pieces = [];
+        const errMsg = data.lastErrorMessage || data.error;
+        if (errMsg) pieces.push('错误: ' + String(errMsg));
+        if (data.url) pieces.push('当前 Webhook: ' + String(data.url));
+        if (data.recommendedUrl && data.recommendedUrl !== data.url) {
+          pieces.push('推荐 Webhook: ' + String(data.recommendedUrl));
+        }
+        if (!pieces.length) pieces.push('可以在 GitHub Actions 日志或 Cloudflare 日志中查看详情。');
+        els.telegramStatusExtra.textContent = pieces.join(' ｜ ');
+      }
+    }
+  } catch (e) {
+    setTelegramStatusBadge('error');
+    els.telegramStatusText.textContent = 'Telegram 状态检查失败。';
+    if (els.telegramStatusExtra) {
+      els.telegramStatusExtra.textContent = String(e && e.message ? e.message : e || '未知错误');
+    }
+  }
+}
+
+if (els.telegramStatusRefresh) {
+  els.telegramStatusRefresh.onclick = () => {
+    loadTelegramStatus();
+  };
 }
 
 // 上一页
@@ -1098,20 +1192,19 @@ window.addEventListener('blur', () => {
     // 初始化时重置导航状态
     resetNavigationState();
     
-    // 会话检查：访客进入演示管理页时展示提示条
     const r = await fetch('/api/session');
     if (!r.ok) return;
     const s = await r.json();
     if (s && s.role === 'guest' && els.demoBanner){ els.demoBanner.style.display = 'block'; }
     
-    // 加载用户列表
     await loadUsers();
+    await loadTelegramStatus();
   } catch(_) { 
-    // 会话检查失败时仍然尝试加载用户列表
     try {
       await loadUsers();
+      await loadTelegramStatus();
     } catch(e) {
-      // 静默处理初始加载失败
+      void e;
     }
   }
 })();

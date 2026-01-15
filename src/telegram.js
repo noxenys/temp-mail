@@ -96,10 +96,13 @@ export async function handleTelegramWebhook(request, env, db) {
     } else if (text.startsWith('/id')) {
       await replyTelegram(env, chatId, `🆔 您的 Chat ID 是: <code>${chatId}</code>`, 'HTML');
     } else if (text.startsWith('/new')) {
-      const domains = (env.MAIL_DOMAIN || 'temp.example.com').split(/[,\s]+/).filter(Boolean);
+      let domains = await getActiveDomains(db);
+      if (!domains || !domains.length) {
+        domains = (env.MAIL_DOMAIN || 'temp.example.com').split(/[,\s]+/).filter(Boolean);
+      }
       const parts = text.split(/\s+/);
-      let domain = domains[0];
-      
+      let domain;
+
       if (parts[1]) {
         const target = parts[1].trim().toLowerCase();
         const found = domains.find(d => d.toLowerCase() === target);
@@ -109,9 +112,21 @@ export async function handleTelegramWebhook(request, env, db) {
           await replyTelegram(env, chatId, `❌ 域名不可用。可用域名:\n${domains.map(d => `<code>${d}</code>`).join('\n')}`, 'HTML');
           return new Response('OK');
         }
+      } else {
+        if (!domains.length) {
+          await replyTelegram(env, chatId, '当前没有可用域名，请检查后台配置。');
+          return new Response('OK');
+        }
+        domain = domains[Math.floor(Math.random() * domains.length)];
       }
-      
-      const email = `${generateRandomId()}@${domain}`;
+
+      const minLenEnv = Number(env.MAIL_LOCALPART_MIN_LEN || 4);
+      const maxLenEnv = Number(env.MAIL_LOCALPART_MAX_LEN || 16);
+      const minLen = Math.max(4, Math.min(32, isNaN(minLenEnv) ? 4 : minLenEnv));
+      const maxLen = Math.max(minLen, Math.min(32, isNaN(maxLenEnv) ? minLen : maxLenEnv));
+      const randomLen = minLen === maxLen ? minLen : (minLen + Math.floor(Math.random() * (maxLen - minLen + 1)));
+
+      const email = `${generateRandomId(randomLen)}@${domain}`;
         
       try {
         await assignMailboxToUser(db, { userId: user.id, address: email });

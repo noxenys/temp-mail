@@ -74,8 +74,8 @@
 }
 
 .mailbox-card .line{ 
-  color:#475569; 
-  font-size:12px; 
+  color: var(--muted); 
+  font-size:13px; 
   white-space: nowrap; 
   overflow: hidden; 
   text-overflow: ellipsis; 
@@ -85,7 +85,7 @@
 
 .mailbox-card .addr{ 
   font-weight:700; 
-  font-size:14px; 
+  font-size:15px; 
   color: var(--text); 
   white-space: nowrap; 
   overflow: hidden; 

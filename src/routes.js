@@ -189,7 +189,7 @@ export async function authMiddleware(context) {
   const url = new URL(request.url);
   
   // 跳过不需要认证的路由
-  const publicPaths = ['/api/login', '/api/logout'];
+  const publicPaths = ['/api/login', '/api/logout', '/telegram/webhook'];
   if (publicPaths.includes(url.pathname)) {
     return null;
   }
@@ -592,7 +592,8 @@ async function delegateApiRequest(context) {
       resendApiKey: RESEND_API_KEY, 
       adminName: ADMIN_NAME, 
       r2: env.MAIL_EML, 
-      authPayload 
+      authPayload,
+      env 
     });
   }
 
@@ -603,7 +604,8 @@ async function delegateApiRequest(context) {
       adminName: ADMIN_NAME, 
       r2: env.MAIL_EML, 
       authPayload,
-      mailboxOnly: true
+      mailboxOnly: true,
+      env 
     });
   }
   
@@ -611,6 +613,7 @@ async function delegateApiRequest(context) {
     resendApiKey: RESEND_API_KEY, 
     adminName: ADMIN_NAME, 
     r2: env.MAIL_EML, 
-    authPayload 
+    authPayload,
+    env 
   });
 }

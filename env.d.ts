@@ -26,6 +26,10 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   CACHE_TTL?: string;
+  MAIL_LOCALPART_MIN_LEN?: string;
+  MAIL_LOCALPART_MAX_LEN?: string;
+  EMAIL_RETENTION_DAYS?: string;
+  MAX_EMAIL_SIZE?: string;
   
   // 缓存系统类型
   CACHE: {

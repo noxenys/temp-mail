@@ -28,18 +28,13 @@ jobs:
     - name: Deploy to Cloudflare Workers
       run: node deploy-github-actions.js
       env:
-          # Cloudflare 认证信息
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          
-          # 必需环境变量
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_TOKEN: ${{ secrets.JWT_TOKEN }}  # 用于根管理员覆盖
+          JWT_TOKEN: ${{ secrets.JWT_TOKEN }}
           MAIL_DOMAIN: ${{ secrets.MAIL_DOMAIN }}
-          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}  # D1数据库ID
-          
-          # 可选环境变量（不填写不影响项目正常使用）
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
@@ -53,3 +48,26 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MAX_EMAIL_SIZE: ${{ secrets.MAX_EMAIL_SIZE }}
           EMAIL_RETENTION_DAYS: ${{ secrets.EMAIL_RETENTION_DAYS }}
+
+    - name: Set and check Telegram Webhook
+      if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.WORKER_URL != '' }}
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        WORKER_URL: ${{ secrets.WORKER_URL }}
+      run: |
+        WORKER_BASE="${WORKER_URL%/}"
+        WEBHOOK_URL="${WORKER_BASE}/telegram/webhook"
+        echo "设置 Telegram Webhook 到: ${WEBHOOK_URL}"
+        SET_RESP=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" --get --data-urlencode "url=${WEBHOOK_URL}" || echo "")
+        echo "setWebhook 响应: ${SET_RESP}"
+        INFO_RESP=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" || echo "")
+        echo "getWebhookInfo 响应: ${INFO_RESP}"
+        if echo "${INFO_RESP}" | grep -q '"url"'; then
+          if echo "${INFO_RESP}" | grep -q '"last_error_date"'; then
+            echo "::warning title=Telegram Webhook 状态::最近存在错误，请检查 Worker 日志和域名配置"
+          else
+            echo "Telegram Webhook 看起来已正常配置"
+          fi
+        else
+          echo "::warning title=Telegram Webhook 状态::未检测到有效 Webhook URL，请检查 TELEGRAM_BOT_TOKEN 和 WORKER_URL"
+        fi
