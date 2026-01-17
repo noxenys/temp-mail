@@ -195,6 +195,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { res
       const recommendedUrl = new URL('/telegram/webhook', origin).toString();
       let autoSetWebhook = false;
       let autoSetError = '';
+      let autoSetCommands = false;
+      let autoSetCommandsError = '';
       
       if (!result.url || result.url !== recommendedUrl) {
         try {
@@ -227,6 +229,49 @@ export async function handleApiRequest(request, db, mailDomains, options = { res
         }
       }
       
+      try {
+        const commands = [
+          { command: 'start', description: '显示欢迎信息和命令列表' },
+          { command: 'new', description: '创建新邮箱，可加域名参数' },
+          { command: 'list', description: '查看当前绑定的邮箱列表' },
+          { command: 'latest', description: '查看指定邮箱的最新一封邮件' },
+          { command: 'code', description: '快速获取验证码或登录链接' },
+          { command: 'emails', description: '列出最近几封邮件概览' },
+          { command: 'domains', description: '查看当前可用的域名列表' },
+          { command: 'domainstats', description: '查看各域名的使用统计' },
+          { command: 'id', description: '查看当前 Chat ID' }
+        ];
+        const urlSetCommands = `https://api.telegram.org/bot${token}/setMyCommands`;
+        const respSetCommands = await fetch(urlSetCommands, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commands })
+        });
+        if (!respSetCommands.ok) {
+          const text = await respSetCommands.text().catch(() => '');
+          logger.error({ logId, action: 'telegram_auto_set_commands', status: respSetCommands.status, body: text });
+          autoSetCommandsError = `Telegram API HTTP ${respSetCommands.status}`;
+        } else {
+          let dataSetCommands = null;
+          try {
+            dataSetCommands = await respSetCommands.json();
+          } catch (_) {
+            dataSetCommands = null;
+          }
+          if (dataSetCommands && dataSetCommands.ok) {
+            autoSetCommands = true;
+            logger.info({ logId, action: 'telegram_auto_set_commands_success' });
+          } else {
+            const desc = dataSetCommands && dataSetCommands.description ? String(dataSetCommands.description) : '';
+            autoSetCommandsError = desc || '自动设置命令列表失败';
+            logger.warn({ logId, action: 'telegram_auto_set_commands_failed', description: desc });
+          }
+        }
+      } catch (e) {
+        autoSetCommandsError = String(e && e.message ? e.message : e);
+        logger.error({ logId, action: 'telegram_auto_set_commands_error', error: e.message, stack: e.stack });
+      }
+      
       const currentUrl = result.url || '';
       const lastErrorDate = result.last_error_date || null;
       const ok = !!currentUrl && !lastErrorDate;
@@ -250,6 +295,8 @@ export async function handleApiRequest(request, db, mailDomains, options = { res
         recommendedUrl,
         autoSetWebhook,
         autoSetError,
+        autoSetCommands,
+        autoSetCommandsError,
         botInfo: {
           id: me.id,
           first_name: me.first_name,
