@@ -1,4 +1,4 @@
-import { clearExpiredCache } from './cacheHelper.js';
+import { clearExpiredCache, hasColumn } from './cacheHelper.js';
 import { getCachedMailboxId, updateMailboxIdCache, invalidateSystemStatCache } from './cacheHelper.js';
 
 // 初始化状态标志（全局共享，Worker 生命周期内有效）
@@ -39,7 +39,7 @@ export async function initDatabase(db) {
  * @returns {Promise<void>}
  */
 async function performFirstTimeSetup(db) {
-  // 快速检查：如果所有必要表存在，跳过初始化
+  let hasAllTables = false;
   try {
     await db.prepare('SELECT 1 FROM mailboxes LIMIT 1').all();
     await db.prepare('SELECT 1 FROM messages LIMIT 1').all();
@@ -47,11 +47,20 @@ async function performFirstTimeSetup(db) {
     await db.prepare('SELECT 1 FROM user_mailboxes LIMIT 1').all();
     await db.prepare('SELECT 1 FROM sent_emails LIMIT 1').all();
     await db.prepare('SELECT 1 FROM domains LIMIT 1').all();
-    // 所有6个必要表都存在，跳过创建
-    return;
+    hasAllTables = true;
   } catch (_) {
-    // 有表不存在，继续初始化
     console.log('检测到数据库表不完整，开始初始化...');
+  }
+  if (hasAllTables) {
+    try {
+      await ensureMailboxColumns(db);
+      await ensureMessageColumns(db);
+      await ensureUserTelegramColumns(db);
+    } catch (e) {
+      console.error('修复 users 表结构失败:', e);
+    }
+    await db.exec('PRAGMA foreign_keys = ON;');
+    return;
   }
   
   // 临时禁用外键约束，避免创建表时的约束冲突
@@ -88,6 +97,50 @@ async function performFirstTimeSetup(db) {
   
   // 重新启用外键约束
   await db.exec('PRAGMA foreign_keys = ON;');
+}
+
+async function ensureUserTelegramColumns(db) {
+  const hasChatId = await hasColumn(db, 'users', 'telegram_chat_id');
+  if (!hasChatId) {
+    await db.exec('ALTER TABLE users ADD COLUMN telegram_chat_id TEXT;');
+  }
+  const hasUsername = await hasColumn(db, 'users', 'telegram_username');
+  if (!hasUsername) {
+    await db.exec('ALTER TABLE users ADD COLUMN telegram_username TEXT;');
+  }
+}
+
+async function ensureMailboxColumns(db) {
+  const cols = [
+    { name: 'last_accessed_at', sql: 'ALTER TABLE mailboxes ADD COLUMN last_accessed_at TEXT;' },
+    { name: 'expires_at', sql: 'ALTER TABLE mailboxes ADD COLUMN expires_at TEXT;' },
+    { name: 'is_pinned', sql: 'ALTER TABLE mailboxes ADD COLUMN is_pinned INTEGER DEFAULT 0;' },
+    { name: 'can_login', sql: 'ALTER TABLE mailboxes ADD COLUMN can_login INTEGER DEFAULT 0;' },
+    { name: 'retention_days', sql: 'ALTER TABLE mailboxes ADD COLUMN retention_days INTEGER;' }
+  ];
+  for (const c of cols) {
+    const exists = await hasColumn(db, 'mailboxes', c.name);
+    if (!exists) {
+      await db.exec(c.sql);
+    }
+  }
+}
+
+async function ensureMessageColumns(db) {
+  const cols = [
+    { name: 'to_addrs', sql: 'ALTER TABLE messages ADD COLUMN to_addrs TEXT NOT NULL DEFAULT \'\';' },
+    { name: 'verification_code', sql: 'ALTER TABLE messages ADD COLUMN verification_code TEXT;' },
+    { name: 'preview', sql: 'ALTER TABLE messages ADD COLUMN preview TEXT;' },
+    { name: 'r2_bucket', sql: 'ALTER TABLE messages ADD COLUMN r2_bucket TEXT NOT NULL DEFAULT \'temp-mail-eml\';' },
+    { name: 'r2_object_key', sql: 'ALTER TABLE messages ADD COLUMN r2_object_key TEXT NOT NULL DEFAULT \'\';' },
+    { name: 'is_pinned', sql: 'ALTER TABLE messages ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;' }
+  ];
+  for (const c of cols) {
+    const exists = await hasColumn(db, 'messages', c.name);
+    if (!exists) {
+      await db.exec(c.sql);
+    }
+  }
 }
 
 /**
