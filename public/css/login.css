@@ -1,24 +1,52 @@
 :root{
-  --surface: linear-gradient(135deg, #0f172a 0%, #111827 40%, #0b1220 100%);
-  --surface-overlay: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(11, 18, 32, 0.95) 100%);
-  --card: rgba(17, 24, 39, 0.6);
-  --card-shadow: rgba(17, 24, 39, 0.3);
-  --card-glass: rgba(17, 24, 39, 0.5);
-  --muted: #cbd5e1;
-  --primary: #06b6d4;
-  --primary-hover: #0891b2;
-  --primary-light: rgba(6, 182, 212, 0.12);
-  --border: #1f2937;
-  --border-light: #0b1220;
-  --border-glass: rgba(255, 255, 255, 0.08);
-  --text: #ffffff;
-  --danger: #f87171;
-  --radius: 20px;
-  --radius-sm: 12px;
-  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Zinc Theme - Monotone */
+  --surface: #ffffff;
+  --surface-overlay: rgba(255, 255, 255, 0.95);
+  
+  --card: #ffffff;
+  --card-shadow: rgba(0, 0, 0, 0.1);
+  --card-glass: rgba(255, 255, 255, 0.9);
+  
+  --muted: #71717a; /* Zinc-500 */
+  --primary: #2563eb; /* Brand Blue */
+  --primary-hover: #1d4ed8;
+  --primary-light: rgba(37, 99, 235, 0.1);
+  
+  --border: #e4e4e7; /* Zinc-200 */
+  --border-light: #f4f4f5; /* Zinc-100 */
+  --border-glass: rgba(0, 0, 0, 0.05);
+  
+  --text: #09090b; /* Zinc-950 */
+  --danger: #ef4444;
+  
+  --radius: 12px;
+  --radius-sm: 8px;
+  
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.1);
+  
+  --transition: all 0.2s ease;
+}
+
+/* Dark Mode Support for Login */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #09090b; /* Zinc-950 */
+    --surface-overlay: rgba(9, 9, 11, 0.95);
+    
+    --card: #18181b; /* Zinc-900 */
+    --card-shadow: rgba(0, 0, 0, 0.3);
+    --card-glass: rgba(24, 24, 27, 0.9);
+    
+    --muted: #a1a1aa; /* Zinc-400 */
+    
+    --border: #27272a; /* Zinc-800 */
+    --border-light: #18181b;
+    --border-glass: rgba(255, 255, 255, 0.05);
+    
+    --text: #fafafa; /* Zinc-50 */
+  }
 }
 
 * {
@@ -67,23 +95,9 @@ body {
 }
 
 body::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(6, 182, 212, 0.18) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.16) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(244, 63, 94, 0.12) 0%, transparent 50%);
-  animation: backgroundShift 15s ease-in-out infinite alternate;
+  content: none;
 }
 
-@keyframes backgroundShift {
-  0% { transform: translateX(-20px) translateY(-10px) scale(1); }
-  100% { transform: translateX(20px) translateY(10px) scale(1.05); }
-}
 
 .center {
   position: relative;

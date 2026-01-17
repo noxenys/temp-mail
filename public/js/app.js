@@ -1210,10 +1210,10 @@ window.showEmail = async (id) => {
         try {
           const style = doc.createElement('style');
           const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-          const textColor = isDark ? '#e2e8f0' : '#020617';
-          const bgColor = isDark ? '#020617' : '#f8fafc';
-          const linkColor = isDark ? '#93c5fd' : '#2563eb';
-          const codeBg = isDark ? '#020617' : '#f1f5f9';
+          const textColor = isDark ? '#e4e4e7' : '#09090b'; // Zinc-200 / Zinc-950
+          const bgColor = isDark ? '#09090b' : '#ffffff';   // Zinc-950 / White
+          const linkColor = isDark ? '#93c5fd' : '#2563eb'; // Blue-300 / Blue-600
+          const codeBg = isDark ? '#18181b' : '#f4f4f5';    // Zinc-900 / Zinc-100
           style.textContent = `
             body {
               background: ${bgColor} !important;
@@ -1254,8 +1254,8 @@ window.showEmail = async (id) => {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       pre.style.whiteSpace = 'pre-wrap';
       pre.style.wordBreak = 'break-word';
-      pre.style.color = isDark ? '#e2e8f0' : '#020617';
-      pre.style.background = isDark ? '#020617' : '#f8fafc';
+      pre.style.color = isDark ? '#e4e4e7' : '#09090b';
+      pre.style.background = isDark ? '#09090b' : '#ffffff';
       pre.textContent = rawText;
       host.appendChild(pre);
     } else {

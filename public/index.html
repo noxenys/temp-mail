@@ -95,7 +95,7 @@
             }catch(_){ }
             // 显示 loading 界面，同时进行权限检查
             var loadingDiv = document.createElement('div');
-            loadingDiv.innerHTML = '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;z-index:9999"><div style="text-align:center"><div style="font-size:3rem;margin-bottom:1rem">📧</div><div style="width:40px;height:40px;border:3px solid rgba(59,130,246,0.2);border-top:3px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>';
+            loadingDiv.innerHTML = '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#ffffff;z-index:9999"><div style="text-align:center"><div style="font-size:3rem;margin-bottom:1rem">📧</div><div style="width:40px;height:40px;border:3px solid rgba(37,99,235,0.2);border-top:3px solid #2563eb;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>';
             document.body.appendChild(loadingDiv);
             
             // 并行进行权限检查

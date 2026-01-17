@@ -1,15 +1,46 @@
-/* 邮箱总览页（独立样式） */
+/* 邮箱总览页（独立样式） - Monotone/Zinc */
 
-/* 补充缺失的CSS变量定义 */
-:root{
-  --card-glass: rgba(255, 255, 255, 0.6);
-  --border-glass: rgba(255, 255, 255, 0.2);
-  --radius: 16px;
-  --shadow-glass: 0 8px 32px rgba(31, 38, 135, 0.15);
-  --text: #1e293b;
-  --text-light: #475569;
-  --muted: #64748b;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* 补充缺失的CSS变量定义 - Zinc Theme */
+:root {
+  /* Light Mode */
+  --surface: #ffffff;
+  --surface-alt: #fafafa;
+  --card: #ffffff;
+  --card-hover: #fafafa;
+  --card-glass: rgba(255, 255, 255, 0.9);
+  
+  --border: #e4e4e7;
+  --border-glass: #e4e4e7;
+  
+  --text: #18181b;
+  --text-light: #52525b;
+  --muted: #a1a1aa;
+  
+  --primary: #2563eb;
+  
+  --shadow-glass: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --radius: 12px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] {
+  --surface: #09090b;
+  --surface-alt: #18181b;
+  --card: #18181b;
+  --card-hover: #27272a;
+  --card-glass: rgba(24, 24, 27, 0.9);
+  
+  --border: #27272a;
+  --border-glass: #27272a;
+  
+  --text: #f4f4f5;
+  --text-light: #a1a1aa;
+  --muted: #71717a;
+  
+  --primary: #3b82f6;
+  
+  --shadow-glass: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
 .page-mailboxes .container{ max-width: 1200px; padding: 16px 16px 24px; grid-template-columns: 1fr; }
@@ -25,7 +56,7 @@
   gap: 12px;
   justify-content: center;
   max-width: 1200px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 默认grid样式，兼容性处理 */
@@ -35,7 +66,7 @@
   gap: 12px;
   justify-content: center;
   max-width: 1200px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 统一卡片尺寸与布局：固定宽高避免参差不齐 */
@@ -46,8 +77,8 @@
   width: 280px;
   height: 140px;
   padding: 12px;
-  background: var(--card-glass);
-  border: 1px solid var(--border-glass);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-glass);
   position: relative;
@@ -58,9 +89,9 @@
 
 .mailbox-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary);
+  background: var(--card-hover);
 }
 
 .mailbox-card:active {

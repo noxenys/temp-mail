@@ -1,72 +1,85 @@
-/* 邮箱用户专用样式 - Enhanced */
+/* 邮箱用户专用样式 - Enhanced (Monotone/Clean) */
 
 /* 基础变量与暗黑模式适配 */
 :root {
-  /* Light Mode (Default) */
-  --surface: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 20%, #f1f5f9 100%);
-  --surface-overlay: rgba(255, 255, 255, 0.9);
-  --card: rgba(255, 255, 255, 0.8);
-  --card-hover: rgba(255, 255, 255, 0.95);
-  --card-glass: rgba(255, 255, 255, 0.6);
-  --border: #e2e8f0;
-  --border-glass: rgba(255, 255, 255, 0.4);
-  --text: #1e293b;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
-  --primary: #3b82f6;
-  --primary-light: rgba(59, 130, 246, 0.1);
-  --primary-text: #2563eb;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  /* Light Mode (Default) - Zinc Theme */
+  --surface: #ffffff;
+  --surface-alt: #fafafa; /* Slightly darker for contrast */
+  --surface-overlay: rgba(255, 255, 255, 0.95);
   
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
+  --card: #ffffff;
+  --card-hover: #fafafa;
+  --card-glass: rgba(255, 255, 255, 0.9); /* Less transparency for cleaner look */
+  
+  --border: #e4e4e7; /* Zinc-200 */
+  --border-glass: #e4e4e7;
+  
+  --text: #18181b; /* Zinc-900 */
+  --text-secondary: #52525b; /* Zinc-600 */
+  --text-tertiary: #a1a1aa; /* Zinc-400 */
+  
+  /* Primary Accent - Keep Blue but consistent */
+  --primary: #2563eb;
+  --primary-light: rgba(37, 99, 235, 0.08);
+  --primary-text: #2563eb;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 8px 30px rgba(0, 0, 0, 0.04);
+  
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
   --radius-full: 9999px;
   
   --header-height: 64px;
 }
 
-/* Dark Mode Variables */
+/* Dark Mode Variables - Zinc Theme */
 [data-theme="dark"] {
-  --surface: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  --surface-overlay: rgba(15, 23, 42, 0.9);
-  --card: rgba(30, 41, 59, 0.7);
-  --card-hover: rgba(51, 65, 85, 0.8);
-  --card-glass: rgba(30, 41, 59, 0.6);
-  --border: #334155;
-  --border-glass: rgba(255, 255, 255, 0.1);
-  --text: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --primary: #60a5fa;
-  --primary-light: rgba(96, 165, 250, 0.15);
-  --primary-text: #93c5fd;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+  --surface: #09090b; /* Zinc-950 */
+  --surface-alt: #18181b; /* Zinc-900 */
+  --surface-overlay: rgba(9, 9, 11, 0.95);
+  
+  --card: #18181b; /* Zinc-900 */
+  --card-hover: #27272a; /* Zinc-800 */
+  --card-glass: rgba(24, 24, 27, 0.9);
+  
+  --border: #27272a; /* Zinc-800 */
+  --border-glass: #27272a;
+  
+  --text: #f4f4f5; /* Zinc-100 */
+  --text-secondary: #a1a1aa; /* Zinc-400 */
+  --text-tertiary: #52525b; /* Zinc-600 */
+  
+  --primary: #3b82f6; /* Lighter blue for dark mode */
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-text: #60a5fa;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Dark Mode Overrides for Common Elements */
 [data-theme="dark"] .btn-ghost {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: transparent;
 }
 [data-theme="dark"] .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
 }
 [data-theme="dark"] .input, 
 [data-theme="dark"] .select {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--card);
   color: var(--text);
   border-color: var(--border);
 }
 [data-theme="dark"] .modal-content {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -81,22 +94,22 @@ body {
   overflow: hidden; /* Prevent body scroll, use inner scroll */
   display: flex;
   flex-direction: column;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* 顶部导航栏适配 */
 .topbar {
-  background: var(--surface-overlay) !important;
-  backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid var(--border-glass) !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
   height: var(--header-height);
   flex-shrink: 0;
   z-index: 50;
+  backdrop-filter: none !important; /* Remove blur for cleaner look */
 }
 
 /* Fix for email detail header contrast */
 .email-detail-header {
-  background: var(--card) !important;
+  background: var(--surface) !important;
   border-bottom: 1px solid var(--border);
 }
 
