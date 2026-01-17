@@ -48,10 +48,17 @@ export async function handleTelegramWebhook(request, env, db) {
   const logId = `tg-${Date.now()}`;
   try {
     if (!env.TELEGRAM_BOT_TOKEN) {
-      return new Response('Telegram Bot Token not configured', { status: 500 });
+      return new Response('Telegram Bot Token not configured');
     }
 
-    const update = await request.json();
+    let update;
+    try {
+      update = await request.json();
+    } catch (err) {
+      logger.error('Telegram Webhook JSON Parse Error', err, { contentType: request.headers.get('content-type') || '' }, logId);
+      return new Response('OK');
+    }
+
     logger.info('Telegram Update', update, logId);
 
     if (!update.message || !update.message.text) {
@@ -291,8 +298,8 @@ export async function handleTelegramWebhook(request, env, db) {
     return new Response('OK');
 
   } catch (e) {
-    logger.error('Telegram Webhook Error', e, logId);
-    return new Response('Internal Server Error', { status: 500 });
+    logger.error('Telegram Webhook Error', e, {}, logId);
+    return new Response('OK');
   }
 }
 
@@ -305,11 +312,15 @@ async function replyTelegram(env, chatId, text, parseMode = null) {
   };
   if (parseMode) {payload.parse_mode = parseMode;}
   
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    logger.error('Telegram Reply Failed', err);
+  }
 }
 
 function escapeHtml(unsafe) {
