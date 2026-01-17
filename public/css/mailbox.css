@@ -150,11 +150,11 @@ body {
 }
 
 .mailbox-id-card {
-  background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
+  background: var(--panel);
   border-radius: var(--radius-lg);
   padding: 24px;
-  color: white;
-  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -162,19 +162,14 @@ body {
   align-items: center;
 }
 
-[data-theme="dark"] .mailbox-id-card {
-  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
-}
-
 .mailbox-id-card::before {
   content: '';
   position: absolute;
-  top: -50%;
-  right: -10%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-  border-radius: 50%;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), #6366f1);
 }
 
 .id-card-info {

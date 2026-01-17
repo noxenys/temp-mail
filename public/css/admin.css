@@ -14,7 +14,6 @@
 }
 
 .topbar .btn:hover {
-  transform: translateY(-1px);
   border-color: var(--text-secondary);
   background: var(--surface-alt);
 }
@@ -89,7 +88,6 @@
 }
 
 .admin-page .card:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
 
@@ -171,7 +169,6 @@
 }
 
 .generate-action .btn-primary:hover {
-  transform: translateY(-1px);
   background: #1d4ed8;
   border-color: #1d4ed8;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
@@ -186,7 +183,6 @@
 }
 
 .generate-action .btn-secondary:hover {
-  transform: translateY(-1px);
   background: #e5e7eb;
   border-color: #cbd5e1;
 }
@@ -238,11 +234,9 @@
   background: #eff6ff;
   border-color: #2563eb;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
-  transform: translateY(-1px);
 }
 
 .user-mailbox-item:active {
-  transform: translateY(0);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
@@ -627,18 +621,16 @@
 
 .user-actions .btn-ghost:hover {
   background: rgba(100, 116, 139, 0.15);
-  transform: translateY(-1px);
 }
 
 .user-actions .btn-secondary {
-  background: linear-gradient(135deg, #64748b, #475569);
-  color: white;
-  border: none;
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid rgba(15, 23, 42, 0.6);
 }
 
 .user-actions .btn-secondary:hover {
-  background: linear-gradient(135deg, #475569, #334155);
-	transform: translateY(-1px);
+  background: #111827;
 }
 
 /* 状态徽章 */
@@ -808,7 +800,6 @@
 .admin-page .admin-left .table tbody td.col-role .role-admin:hover {
   background: rgba(59, 130, 246, 0.15) !important;
   border-color: rgba(59, 130, 246, 0.3) !important;
-  transform: translateY(-1px) !important;
 }
 
 /* 普通角色 - 灰色主题 */
@@ -822,7 +813,6 @@
 .admin-page .admin-left .table tbody td.col-role .role-user:hover {
   background: rgba(100, 116, 139, 0.15) !important;
   border-color: rgba(100, 116, 139, 0.3) !important;
-  transform: translateY(-1px) !important;
 }
 
 /* ===========================================
@@ -832,7 +822,7 @@
 .admin-page .select,
 .admin-page textarea {
   width: 100%;
-  background: #ffffff;
+  background: #f8fafc;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px 16px;
@@ -856,7 +846,6 @@
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
-  transform: translateY(-1px);
   background: #ffffff;
 }
 
@@ -983,7 +972,6 @@
 .toggle:hover {
   background: rgba(255, 255, 255, 0.9);
   border-color: rgba(59, 130, 246, 0.2);
-  transform: translateY(-1px);
 }
 
 .toggle input {

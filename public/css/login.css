@@ -15,9 +15,9 @@
   --danger: #ef4444;
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 12px 35px rgba(15, 23, 42, 0.8);
-  --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.85);
-  --shadow-glass: 0 18px 45px rgba(15, 23, 42, 0.9);
+  --shadow: 0 10px 28px rgba(15, 23, 42, 0.6);
+  --shadow-lg: 0 14px 32px rgba(15, 23, 42, 0.55);
+  --shadow-glass: 0 16px 40px rgba(15, 23, 42, 0.6);
   --transition: all 0.2s ease-out;
 }
 
@@ -111,8 +111,8 @@ body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #06b6d4, #6366f1, #f43f5e);
+  height: 2px;
+  background: linear-gradient(90deg, #2563eb, #6366f1);
 }
 
 @keyframes cardSlideIn {

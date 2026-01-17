@@ -82,9 +82,9 @@
   --shadow-colored: 0 8px 25px rgba(37, 99, 235, 0.1);
   
   /* 动画 */
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.2s ease-out;
+  --transition-fast: all 0.18s ease-out;
+  --transition-slow: all 0.22s ease-out;
   --spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -245,10 +245,7 @@ body::before{
 }
 
 .brand span{
-  background: linear-gradient(135deg, var(--primary), #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
   font-weight: 800;
 }
 
@@ -286,11 +283,10 @@ body::before{
 }
 
 .btn-ghost:hover{
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #f4f4f5;
   border: 1px solid var(--primary);
   color: var(--primary);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
 }
 
 .container{
@@ -357,7 +353,6 @@ body::before{
 
 .sidebar:hover{
   box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
 }
 
 /* 侧板头部布局 */
@@ -468,7 +463,6 @@ body::before{
 }
 
 .card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-lg), 0 0 0 1px rgba(59, 130, 246, 0.05);
 }
 
@@ -591,7 +585,7 @@ body::before{
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   border-color: var(--primary);
   color: white;
-  transform: scale(1.1) translateY(-2px);
+  transform: scale(1.02);
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
@@ -632,7 +626,6 @@ body::before{
 
 .sidebar.collapsed:hover {
   animation: sidebarPulse 2s ease-in-out infinite;
-  transform: translateY(-1px);
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -699,7 +692,7 @@ body::before{
 
 .sidebar.collapsed .sidebar-toggle-btn:hover {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  transform: scale(1.15) translateY(-3px);
+  transform: scale(1.04);
   box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
 }
 
@@ -736,7 +729,6 @@ body::before{
 .sidebar.collapsed #mb-more:hover {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
@@ -853,11 +845,10 @@ body::before{
 .container.sidebar-collapsed .mailbox-actions .btn {
   padding: 12px 18px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition);
 }
 
 .container.sidebar-collapsed .mailbox-actions .btn:hover {
-  transform: translateY(-2px);
 }
 
 /* 侧板收起时的配置项优化 */
@@ -879,33 +870,30 @@ body::before{
   font-size: 15px;
   font-weight: 600;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  transform: translateY(0);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition);
 }
 
 .container.sidebar-collapsed .btn-generate:hover {
-  transform: translateY(-3px);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
 }
 
 /* 侧板收起时的卡片样式优化 */
 .container.sidebar-collapsed .generate-card {
   box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(59, 130, 246, 0.1);
-  background: linear-gradient(135deg, var(--card) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--panel);
 }
 
 .container.sidebar-collapsed .inbox-card {
   box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(16, 185, 129, 0.1);
-  background: linear-gradient(135deg, var(--card) 0%, rgba(240, 253, 250, 0.95) 100%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--panel);
   transform: translateY(0);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition);
 }
 
 .container.sidebar-collapsed .inbox-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 /* 侧板收起时的整体容器动画 */
@@ -1092,11 +1080,11 @@ body::before{
 }
 
 .generate-card{
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(15, 23, 42, 0.06));
+  background: var(--panel);
 }
 
 .inbox-card{
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(15, 23, 42, 0.06));
+  background: var(--panel);
 }
 .listcard-header{
   display: grid;
@@ -1160,14 +1148,11 @@ body::before{
 }
 
 .mailbox-item.pinned:hover{
-  background: linear-gradient(135deg, 
-    rgba(255, 248, 220, 0.9) 0%, 
-    rgba(254, 240, 180, 0.8) 100%);
+  background: #fffbeb;
   border-left-color: #d97706;
   box-shadow: 
     0 4px 12px rgba(245, 158, 11, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transform: translateY(-1px);
 }
 
 .mailbox-item.pinned::after{
@@ -1337,7 +1322,6 @@ body::before{
 
 .card:hover{
   box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
 }
 
 .card h2{
@@ -1501,7 +1485,6 @@ body::before{
 .mailbox-actions .btn-secondary:hover{
   background: var(--primary);
   color: white;
-  transform: translateY(-2px);
 }
 
 .mailbox-actions .btn-danger{
@@ -1514,7 +1497,6 @@ body::before{
   background: var(--danger);
   color: white;
   border-color: var(--danger);
-  transform: translateY(-2px);
 }
 
 .mailbox-actions .btn-ghost{
@@ -1527,7 +1509,6 @@ body::before{
   background: var(--primary-light);
   color: var(--primary);
   border-color: var(--primary);
-  transform: translateY(-2px);
 }
 
 .config-form{
@@ -1622,8 +1603,7 @@ select:disabled{
 }
 
 .btn-generate:hover{
-  transform: translateY(-2px);
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: #1d4ed8;
   border-color: rgba(37, 99, 235, 0.5);
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -1651,7 +1631,7 @@ select:disabled{
 }
 
 .btn{
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+  background: #ffffff;
   color: var(--text);
   border: 1px solid rgba(226, 232, 240, 0.6);
   border-radius: 12px;
@@ -1695,10 +1675,9 @@ select:disabled{
 }
 
 .btn:hover{
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+  background: #f9fafb;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border-color: rgba(226, 232, 240, 0.8);
-  transform: translateY(-3px) scale(1.02);
 }
 
 .btn:hover::before{
@@ -1706,35 +1685,34 @@ select:disabled{
 }
 
 .btn:active{
-  transform: translateY(-1px) scale(1.01);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .btn-danger{
-  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+  background: var(--danger);
   box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .btn-danger:hover{
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: #dc2626;
   box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* 主要按钮样式 - 使用主色 */
 .btn-primary{
-  background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+  background: var(--primary);
   color: white;
   border: 1px solid rgba(59, 130, 246, 0.3);
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover{
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: #1d4ed8;
   border-color: rgba(37, 99, 235, 0.5);
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .btn-secondary{
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%);
+  background: #ffffff;
   color: var(--text);
   border: 1px solid rgba(226, 232, 240, 0.6);
   backdrop-filter: blur(16px);
@@ -1744,11 +1722,10 @@ select:disabled{
 }
 
 .btn-secondary:hover{
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+  background: #f9fafb;
   border-color: rgba(59, 130, 246, 0.3);
   color: var(--primary);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transform: translateY(-2px) scale(1.01);
 }
 
 .btn-sm{
@@ -2564,7 +2541,6 @@ select:disabled{
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  transform: translateY(-1px);
 }
 
 /* 更显眼的用户名长度滑块 */
@@ -2900,7 +2876,26 @@ html,body{
   background: var(--panel); 
   box-shadow: var(--shadow); 
   border: 1px solid var(--border); 
-  border-radius: 14px; 
+  border-radius: 16px; 
+} 
+
+/* 页面级大卡片签名线（同屏仅一处） */ 
+.admin-container .admin-left > .card:first-child,
+.page-mailboxes .container .main > .card:first-child,
+.generate-card{ 
+  position: relative; 
+} 
+
+.admin-container .admin-left > .card:first-child::before,
+.page-mailboxes .container .main > .card:first-child::before,
+.generate-card::before{ 
+  content: ''; 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  height: 2px; 
+  background: linear-gradient(90deg, var(--primary), #6366f1); 
 } 
 
 /* 按钮与焦点可见性（提高可访问性） */ 
