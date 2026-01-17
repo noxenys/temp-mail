@@ -284,7 +284,7 @@ export async function handleTelegramWebhook(request, env, db) {
         });
         await replyTelegram(env, chatId, reply, 'HTML');
       }
-    } else if (text.startsWith('/domains')) {
+    } else if (text === '/domains') {
       const domains = await getActiveDomains(db);
       if (!domains || domains.length === 0) {
         await replyTelegram(env, chatId, '当前没有可用域名，请检查后台配置。');
@@ -296,7 +296,7 @@ export async function handleTelegramWebhook(request, env, db) {
         reply += `\n共 ${domains.length} 个活跃域名。`;
         await replyTelegram(env, chatId, reply, 'HTML');
       }
-    } else if (text.startsWith('/domainstats')) {
+    } else if (text === '/domainstats') {
       const stats = await getDomainStats(db);
       const usage = await getDomainUsageStats(db);
       const active = stats && typeof stats.active === 'number' ? stats.active : 0;
