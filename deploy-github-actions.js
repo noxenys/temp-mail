@@ -148,8 +148,9 @@ try {
       }
     } else {
       try {
-        execSync(`npx wrangler secret delete ${envVar.name} --env="" --yes`, {
-          stdio: ['ignore', 'inherit', 'inherit']
+        execSync(`npx wrangler secret delete ${envVar.name} --env=""`, {
+          input: 'y\n',
+          stdio: ['pipe', 'inherit', 'inherit']
         });
         console.log(`🗑️ 已删除 Cloudflare 中多余的环境变量: ${envVar.name}`);
       } catch {

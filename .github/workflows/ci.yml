@@ -46,6 +46,8 @@ jobs:
           RESEND: ${{ secrets.RESEND }}
           FORWARD_RULES: ${{ secrets.FORWARD_RULES }}
           CACHE_TTL: ${{ secrets.CACHE_TTL }}
+          SITE_MODE: ${{ secrets.SITE_MODE }}
+          GUEST_ENABLED: ${{ secrets.GUEST_ENABLED }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MAX_EMAIL_SIZE: ${{ secrets.MAX_EMAIL_SIZE }}
