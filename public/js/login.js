@@ -1,6 +1,7 @@
 const username = document.getElementById('username');
 const pwd = document.getElementById('pwd');
 const btn = document.getElementById('login');
+const guestBtn = document.getElementById('guest-login');
 const err = document.getElementById('err');
 
 // 检查必要的DOM元素是否存在
@@ -127,3 +128,11 @@ async function doLogin(){
 if (btn) btn.addEventListener('click', doLogin);
 if (pwd) pwd.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 if (username) username.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+if (guestBtn && username && pwd) {
+  guestBtn.addEventListener('click', () => {
+    username.value = 'guest';
+    pwd.value = '123456';
+    doLogin();
+  });
+}
