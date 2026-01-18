@@ -23,6 +23,7 @@ interface Env {
   ADMIN_PASSWORD?: string;
   ADMIN_PASS?: string;
   GUEST_PASSWORD?: string;
+  GUEST_ENABLED?: string;
   ADMIN_USERNAME?: string;
   ADMIN_NAME?: string;
 

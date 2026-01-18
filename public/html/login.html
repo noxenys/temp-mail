@@ -108,7 +108,17 @@
     <div class="center">
       <div class="card">
         <div class="logo"></div>
-        <h1>登录到 Temp Email</h1>
+        <h1 class="login-title">
+          <span class="login-title-text">登录到 Temp Email</span>
+          <a
+            class="login-doc-link"
+            href="https://github.com/noxenys/temp-mail/blob/main/DEPLOYMENT_GUIDE.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            部署文档
+          </a>
+        </h1>
 
         <div id="info-banner" class="info-banner" hidden>
           <div class="info-banner-icon" aria-hidden="true">i</div>
@@ -123,7 +133,7 @@
             target="_blank"
             rel="noreferrer"
           >
-            查看部署文档
+            查看文档
           </a>
         </div>
 
@@ -131,7 +141,9 @@
         <input id="username" class="input" type="text" placeholder="用户名/邮箱" />
         <input id="pwd" class="input" type="password" placeholder="密码" />
         <button id="login" class="btn">登录</button>
-        <button id="guest-login" class="btn-secondary" type="button">使用访客账号登录</button>
+        <div id="guest-login-section">
+          <button id="guest-login" class="btn-secondary" type="button">使用访客账号登录</button>
+        </div>
       </div>
     </div>
     <div id="toast" class="toast"></div>

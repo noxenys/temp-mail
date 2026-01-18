@@ -138,12 +138,41 @@ body::before {
   50% { transform: translateY(-10px) rotate(2deg); }
 }
 
-h1 {
+.login-title {
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 32px 0;
   color: #e5e7eb;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.login-title-text {
+  display: inline-block;
+}
+
+.login-doc-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: #93c5fd;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-doc-link::after {
+  content: '↗';
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.login-doc-link:hover {
+  color: #bfdbfe;
+  text-decoration: underline;
 }
 
 .info-banner {

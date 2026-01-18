@@ -507,7 +507,10 @@ export function createRouter() {
     const rawMode = String(env.SITE_MODE || '').trim().toLowerCase();
     const siteMode = rawMode === 'demo' ? 'demo' : 'selfhost';
 
-    const guestLoginEnabled = !!env.GUEST_PASSWORD;
+    const guestFlag = String(env.GUEST_ENABLED || '').trim().toLowerCase();
+    const guestSwitchOn = guestFlag === 'true' || guestFlag === '1';
+    const hasGuestPassword = !!env.GUEST_PASSWORD;
+    const guestLoginEnabled = guestSwitchOn && hasGuestPassword;
     const showDemoBanner = siteMode === 'demo';
     const showGuestBanner = !showDemoBanner && guestLoginEnabled;
 

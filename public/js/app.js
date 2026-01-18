@@ -678,6 +678,15 @@ async function loadDomains(){
       return; 
     }
     const s = await r.json();
+    let siteMode = 'selfhost';
+    try {
+      const cfgRes = await fetch('/api/config', { headers: { 'Cache-Control': 'no-cache' } });
+      if (cfgRes && cfgRes.ok) {
+        const cfg = await cfgRes.json();
+        const rawMode = String(cfg.siteMode || '').trim().toLowerCase();
+        siteMode = rawMode === 'demo' ? 'demo' : 'selfhost';
+      }
+    } catch(_){ }
     try{
       // 持久化会话到本地，用于下次快速渲染
       cacheSet('session', s);
@@ -685,11 +694,11 @@ async function loadDomains(){
     }catch(_){ }
     // 应用会话UI（包括角色徽章和手机端身份显示）
     applySessionUI(s);
-    if (s.role === 'guest') {
+    if (s.role === 'guest' && siteMode === 'demo') {
       window.__GUEST_MODE__ = true;
             const bar = document.createElement('div');
       bar.className = 'demo-banner';
-      bar.innerHTML = '👀 当前为 <strong>观看模式</strong>（模拟数据，仅演示）。要接收真实邮件，请自建部署或联系部署。';
+      bar.innerHTML = '👀 当前为 <strong>体验站 / 共享环境</strong>，功能可能受限，请勿发送敏感信息。如需长期稳定使用，请自建部署。<a href="https://github.com/noxenys/temp-mail/blob/main/DEPLOYMENT_GUIDE.md" target="_blank" rel="noreferrer">部署文档</a>';
       document.body.prepend(bar);
       // 强制 UI 仅显示 example.com
       const exampleOnly = ['example.com'];

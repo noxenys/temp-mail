@@ -35,7 +35,7 @@
 # 📸 项目展示
 ### 体验地址： `https://tempmail.noxen.de5.net`
 
-> 说明：该地址为官方 Demo / 体验环境，示例配置为 `SITE_MODE=demo`，并已启用 `GUEST_PASSWORD` 访客账号。自建部署默认视为 `selfhost` 模式，不会显示“共享环境/演示站”提示。
+> 说明：该地址为官方 Demo / 体验环境，示例配置为 `SITE_MODE=demo`，并已启用访客模式（`GUEST_ENABLED=true` + `GUEST_PASSWORD`）。自建部署默认视为 `selfhost` 模式：不会显示“共享环境/演示站”提示，也不会默认暴露访客入口。
 
 ### 体验账号： 
 - 访客用户名：guest
@@ -292,6 +292,7 @@ npm run deploy
 | `EMAIL_RETENTION_DAYS` | 可选 | 全局默认邮件保留天数（单个邮箱没配置时用它） | Cloudflare Worker Variables / Secrets |
 | `FORWARD_RULES` | 可选 | 邮件自动转发规则，转发到常用邮箱 | Cloudflare Worker Secrets / Variables |
 | `GUEST_PASSWORD` | 可选 | 访客账号的登录密码（隐藏演示用） | Cloudflare Worker Secrets / GitHub Secrets |
+| `GUEST_ENABLED` | 可选 | 显式开启访客入口和访客提示条 | Cloudflare Worker Secrets / GitHub Secrets |
 | `JWT_TOKEN` | 可选 | 根管理员令牌（万能管理密钥，用于脚本/调试） | Cloudflare Worker Secrets / GitHub Secrets |
 | `MAIL_LOCALPART_MIN_LEN` / `MAIL_LOCALPART_MAX_LEN` | 可选 | 随机邮箱前缀长度范围 | Cloudflare Worker Variables |
 | `MAX_EMAIL_SIZE` | 可选预留 | 预留的“单封邮件最大尺寸”配置，当前代码尚未启用限制 | Cloudflare Worker Secrets |
@@ -325,13 +326,16 @@ npm run deploy
 - `JWT_TOKEN`：根管理员令牌（Root Admin Override，可选但推荐配置）
   - 示例：`JWT_TOKEN="your_root_admin_token"`
   - 用途：携带该令牌即可直接以最高管理员身份访问受保护接口，便于脚本/调试
-- `GUEST_PASSWORD`：访客登录密码（可选，配置后启用访客模式）
+- `GUEST_PASSWORD`：访客登录密码（可选）
   - 示例：`GUEST_PASSWORD="guest_access_password"`
   - 用途：为访客账号设置统一密码，用于只读或受限访问
+- `GUEST_ENABLED`：访客模式开关（可选）
+  - 可选值：`true` / `1`，默认关闭
+  - 用途：显式开启登录页的“访客账号登录”按钮与访客模式提示，仅当同时配置了 `GUEST_PASSWORD` 时生效；未开启时，自建站默认不会展示访客入口。
 - `SITE_MODE`：站点模式控制（可选）
   - 可选值：`demo` / `selfhost`，默认视为 `selfhost`
-  - 当为 `demo` 时：登录页展示“官方体验站 / 共享环境”提示，并附带部署文档链接
-  - 当为 `selfhost` 时：不展示 Demo 提示；若配置了 `GUEST_PASSWORD`，仅展示“访客模式（权限受限）”提示
+  - 当为 `demo` 时：登录页展示“官方体验站 / 共享环境”提示条，访客登录进入首页时顶部会出现“体验站 / 共享环境”横幅，并附带部署文档链接，部分功能可能受限
+  - 当为 `selfhost` 时：不展示 Demo 提示条和顶部横幅；即便存在访客账号，也不会把自建站标记为“共享环境/仅演示”
 - `SHOW_DEMO_BANNER`：旧版兼容开关（已废弃，保留向后兼容）
   - 说明：早期版本用于控制演示站提示条，新版本中登录页提示完全由 `SITE_MODE` 控制，`SHOW_DEMO_BANNER` 不再影响界面显示。新部署请不要再使用该变量，仅旧版本升级场景可暂时保留。
 - `ADMIN_NAME`：严格管理员用户名（默认 `admin`）

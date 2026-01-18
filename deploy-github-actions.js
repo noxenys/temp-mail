@@ -106,7 +106,7 @@ try {
     console.log('ℹ️ 未提供 D1_DATABASE_ID，跳过数据库绑定更新');
   }
   console.log('🔧 设置环境变量...');
-  
+ 
   const envVars = [
     // 必需环境变量
     { name: 'ADMIN_PASSWORD', value: process.env.ADMIN_PASSWORD },
@@ -130,25 +130,34 @@ try {
     { name: 'TELEGRAM_BOT_TOKEN', value: process.env.TELEGRAM_BOT_TOKEN },
     { name: 'TELEGRAM_CHAT_ID', value: process.env.TELEGRAM_CHAT_ID },
     { name: 'MAX_EMAIL_SIZE', value: process.env.MAX_EMAIL_SIZE },
-    { name: 'EMAIL_RETENTION_DAYS', value: process.env.EMAIL_RETENTION_DAYS }
+    { name: 'EMAIL_RETENTION_DAYS', value: process.env.EMAIL_RETENTION_DAYS },
+    { name: 'GUEST_ENABLED', value: process.env.GUEST_ENABLED }
   ];
-  
+
   for (const envVar of envVars) {
-    if (envVar.value) {
+    const hasKey = Object.prototype.hasOwnProperty.call(process.env, envVar.name);
+    if (hasKey) {
       try {
         execSync(`npx wrangler secret put ${envVar.name} --env=""`, {
-          input: envVar.value,
+          input: String(envVar.value ?? ''),
           stdio: ['pipe', 'inherit', 'inherit']
         });
-        console.log(`✅ 已设置环境变量: ${envVar.name}`);
+        console.log(`✅ 已同步环境变量: ${envVar.name}`);
       } catch (error) {
-        console.warn(`⚠️ 设置环境变量 ${envVar.name} 失败:`, error.message);
+        console.warn(`⚠️ 同步环境变量 ${envVar.name} 失败:`, error.message);
       }
     } else {
-      console.log(`ℹ️ 未提供环境变量: ${envVar.name}`);
+      try {
+        execSync(`npx wrangler secret delete ${envVar.name} --env="" --yes`, {
+          stdio: ['ignore', 'inherit', 'inherit']
+        });
+        console.log(`🗑️ 已删除 Cloudflare 中多余的环境变量: ${envVar.name}`);
+      } catch {
+        console.log(`ℹ️ Cloudflare 中不存在需删除的环境变量: ${envVar.name}`);
+      }
     }
   }
-  
+
   // 5. 构建项目
   console.log('🔨 构建项目...');
   execSync('npm run build', { stdio: 'inherit' });

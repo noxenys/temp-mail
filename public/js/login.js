@@ -1,6 +1,7 @@
 const username = document.getElementById('username');
 const pwd = document.getElementById('pwd');
 const btn = document.getElementById('login');
+const guestSection = document.getElementById('guest-login-section');
 const guestBtn = document.getElementById('guest-login');
 const infoBanner = document.getElementById('info-banner');
 const infoBannerTitle = document.getElementById('info-banner-title');
@@ -133,18 +134,15 @@ if (btn) btn.addEventListener('click', doLogin);
 if (pwd) pwd.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 if (username) username.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-if (guestBtn && username && pwd) {
-  guestBtn.addEventListener('click', () => {
-    username.value = 'guest';
-    pwd.value = '123456';
-    doLogin();
-  });
-}
-
 async function initLoginBanner() {
   if (!infoBanner || !infoBannerTitle || !infoBannerDesc || !infoBannerLink) {
     return;
   }
+
+  infoBanner.hidden = true;
+  infoBannerTitle.textContent = '';
+  infoBannerDesc.textContent = '';
+  infoBannerLink.style.display = 'none';
 
   try {
     const response = await fetch('/api/config', {
@@ -157,17 +155,27 @@ async function initLoginBanner() {
     const config = await response.json();
     const modeFromConfig = String(config.siteMode || '').trim().toLowerCase();
     const siteMode = modeFromConfig === 'demo' ? 'demo' : 'selfhost';
-    const guestEnabled = !!config.guestEnabled || !!config.showGuestBanner;
-    const hasGuestEntry = !!guestBtn;
-
+    const guestEnabled = !!config.guestEnabled;
     const needDemoBanner = siteMode === 'demo';
-    const needGuestBanner = !needDemoBanner && guestEnabled && hasGuestEntry;
+    const needGuestBanner = !needDemoBanner && guestEnabled;
+
+    if (!guestEnabled && guestSection) {
+      guestSection.remove();
+    }
+
+    if (guestEnabled && guestBtn && username && pwd) {
+      guestBtn.addEventListener('click', () => {
+        username.value = 'guest';
+        pwd.value = '123456';
+        doLogin();
+      });
+    }
 
     if (needDemoBanner) {
-      infoBannerTitle.textContent = '当前为官方体验站共享环境，请勿存放或发送敏感信息。';
-      infoBannerDesc.textContent = '该环境用于体验与演示，数据可能会定期清理。如需长期稳定使用，推荐 Fork 仓库自建部署。';
+      infoBannerTitle.textContent = '当前为官方体验站 / 共享环境，请勿存放或发送敏感信息。';
+      infoBannerDesc.textContent = '该环境仅用于体验与演示，数据可能会定期清理。如需长期稳定使用，推荐 Fork 仓库自建部署。';
       infoBannerLink.style.display = '';
-      infoBannerLink.textContent = '查看部署文档';
+      infoBannerLink.textContent = '部署文档';
       infoBanner.hidden = false;
       return;
     }
