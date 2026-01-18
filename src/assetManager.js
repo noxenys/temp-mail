@@ -36,7 +36,8 @@ export class AssetManager {
       '/app-mobile.css',
       '/mailbox.css',
       '/auth-guard.js',
-      '/storage.js'
+      '/storage.js',
+      '/env.js'
     ]);
 
     // 定义允许的路径前缀
