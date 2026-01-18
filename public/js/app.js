@@ -680,10 +680,8 @@ async function loadDomains(){
     const s = await r.json();
     let siteMode = 'selfhost';
     try {
-      const cfgRes = await fetch('/api/config', { headers: { 'Cache-Control': 'no-cache' } });
-      if (cfgRes && cfgRes.ok) {
-        const cfg = await cfgRes.json();
-        const rawMode = String(cfg.siteMode || '').trim().toLowerCase();
+      if (typeof window !== 'undefined' && window.__SITE_MODE__) {
+        const rawMode = String(window.__SITE_MODE__).trim().toLowerCase();
         siteMode = rawMode === 'demo' ? 'demo' : 'selfhost';
       }
     } catch(_){ }
@@ -696,9 +694,9 @@ async function loadDomains(){
     applySessionUI(s);
     if (s.role === 'guest' && siteMode === 'demo') {
       window.__GUEST_MODE__ = true;
-            const bar = document.createElement('div');
+      const bar = document.createElement('div');
       bar.className = 'demo-banner';
-      bar.innerHTML = '👀 当前为 <strong>体验站 / 共享环境</strong>，功能可能受限，请勿发送敏感信息。如需长期稳定使用，请自建部署。<a href="https://github.com/noxenys/temp-mail/blob/main/DEPLOYMENT_GUIDE.md" target="_blank" rel="noreferrer">部署文档</a>';
+      bar.innerHTML = '👀 当前为官方体验站（共享环境），请勿发送敏感信息。要接收真实邮件，请自建部署。<a href="https://github.com/noxenys/temp-mail/blob/main/DEPLOYMENT_GUIDE.md" target="_blank" rel="noreferrer">部署文档</a>';
       document.body.prepend(bar);
       // 强制 UI 仅显示 example.com
       const exampleOnly = ['example.com'];

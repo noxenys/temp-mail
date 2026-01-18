@@ -1351,14 +1351,33 @@ window.addEventListener('blur', () => {
     resetNavigationState();
     
     const r = await fetch('/api/session');
-    if (!r.ok) return;
+    if (!r.ok) {
+      if (els.demoBanner) {
+        els.demoBanner.remove();
+      }
+      return;
+    }
     const s = await r.json();
-    if (s && s.role === 'guest' && els.demoBanner){ els.demoBanner.style.display = 'block'; }
+    let siteMode = 'selfhost';
+    try {
+      if (typeof window !== 'undefined' && window.__SITE_MODE__) {
+        const raw = String(window.__SITE_MODE__).trim().toLowerCase();
+        siteMode = raw === 'demo' ? 'demo' : 'selfhost';
+      }
+    } catch(_){ }
+    if (siteMode === 'demo' && s && s.role === 'guest' && els.demoBanner) {
+      els.demoBanner.style.display = 'block';
+    } else if (els.demoBanner) {
+      els.demoBanner.remove();
+    }
     
     await loadUsers();
     await loadTelegramStatus();
     await loadDomainUsage();
   } catch(_) { 
+    if (els.demoBanner) {
+      els.demoBanner.remove();
+    }
     try {
       await loadUsers();
       await loadTelegramStatus();

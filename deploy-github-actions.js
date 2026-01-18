@@ -158,11 +158,23 @@ try {
     }
   }
 
-  // 5. 构建项目
+  // 5. 生成前端环境配置文件 public/env.js（仅包含非敏感开关）
+  console.log('📝 生成前端环境配置 public/env.js...');
+  const rawSiteMode = String(process.env.SITE_MODE || '').trim().toLowerCase();
+  const siteMode = rawSiteMode === 'demo' ? 'demo' : 'selfhost';
+  const rawGuestEnabled = String(process.env.GUEST_ENABLED || '').trim().toLowerCase();
+  const guestEnabled = rawGuestEnabled === 'true' || rawGuestEnabled === '1' || rawGuestEnabled === 'yes';
+  const envJsContent =
+    `window.__SITE_MODE__ = "${siteMode}";\n` +
+    `window.__GUEST_ENABLED__ = ${guestEnabled ? 'true' : 'false'};\n`;
+  writeFileSync('public/env.js', envJsContent, 'utf8');
+  console.log('✅ 已写入 public/env.js');
+
+  // 6. 构建项目
   console.log('🔨 构建项目...');
   execSync('npm run build', { stdio: 'inherit' });
 
-  // 6. 部署到 Cloudflare Workers
+  // 7. 部署到 Cloudflare Workers
   console.log('☁️ 部署到 Cloudflare Workers...');
   execSync('npx wrangler deploy --env=""', { stdio: 'inherit' });
   

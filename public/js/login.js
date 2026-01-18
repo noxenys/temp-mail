@@ -134,6 +134,41 @@ if (btn) btn.addEventListener('click', doLogin);
 if (pwd) pwd.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 if (username) username.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
+function readGuestEnabledFromWindow() {
+  try {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    const raw = window.__GUEST_ENABLED__;
+    if (raw === undefined || raw === null) {
+      return false;
+    }
+    if (typeof raw === 'boolean') {
+      return raw;
+    }
+    const s = String(raw).trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === 'on';
+  } catch (_) {
+    return false;
+  }
+}
+
+function readSiteModeFromWindow() {
+  try {
+    if (typeof window === 'undefined') {
+      return 'selfhost';
+    }
+    const raw = window.__SITE_MODE__;
+    if (raw === undefined || raw === null || raw === '') {
+      return 'selfhost';
+    }
+    const s = String(raw).trim().toLowerCase();
+    return s === 'demo' ? 'demo' : 'selfhost';
+  } catch (_) {
+    return 'selfhost';
+  }
+}
+
 async function initLoginBanner() {
   if (!infoBanner || !infoBannerTitle || !infoBannerDesc || !infoBannerLink) {
     return;
@@ -145,17 +180,8 @@ async function initLoginBanner() {
   infoBannerLink.style.display = 'none';
 
   try {
-    const response = await fetch('/api/config', {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    if (!response.ok) {
-      return;
-    }
-
-    const config = await response.json();
-    const modeFromConfig = String(config.siteMode || '').trim().toLowerCase();
-    const siteMode = modeFromConfig === 'demo' ? 'demo' : 'selfhost';
-    const guestEnabled = !!config.guestEnabled;
+    const siteMode = readSiteModeFromWindow();
+    const guestEnabled = readGuestEnabledFromWindow();
     const needDemoBanner = siteMode === 'demo';
     const needGuestBanner = !needDemoBanner && guestEnabled;
 
@@ -187,8 +213,20 @@ async function initLoginBanner() {
       infoBanner.hidden = false;
       return;
     }
+
+    if (!needDemoBanner && !needGuestBanner) {
+      if (guestSection) {
+        guestSection.remove();
+      }
+      infoBanner.remove();
+    }
   } catch (e) {
-    void e;
+    if (guestSection) {
+      guestSection.remove();
+    }
+    if (infoBanner) {
+      infoBanner.remove();
+    }
   }
 }
 
