@@ -168,7 +168,8 @@ try {
     `window.__SITE_MODE__ = "${siteMode}";\n` +
     `window.__GUEST_ENABLED__ = ${guestEnabled ? 'true' : 'false'};\n`;
   writeFileSync('public/env.js', envJsContent, 'utf8');
-  console.log('✅ 已写入 public/env.js');
+  console.log('✅ 已写入 public/env.js，内容如下（仅非敏感开关）：');
+  console.log(envJsContent);
 
   // 6. 构建项目
   console.log('🔨 构建项目...');
