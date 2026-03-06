@@ -1218,17 +1218,17 @@ window.showEmail = async (id) => {
         doc.close();
         try {
           const style = doc.createElement('style');
-          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-          const textColor = isDark ? '#e4e4e7' : '#09090b'; // Zinc-200 / Zinc-950
-          const bgColor = isDark ? '#09090b' : '#ffffff';   // Zinc-950 / White
-          const linkColor = isDark ? '#93c5fd' : '#2563eb'; // Blue-300 / Blue-600
-          const codeBg = isDark ? '#18181b' : '#f4f4f5';    // Zinc-900 / Zinc-100
+          // 邮件正文统一为“白纸黑字”，避免深色主题下邮件自带深色字看不清
+          const bgColor = '#ffffff';
+          const textColor = '#1e293b';
+          const linkColor = '#2563eb';
+          const codeBg = '#f1f5f9';
           style.textContent = `
             body {
               background: ${bgColor} !important;
               color: ${textColor} !important;
             }
-            body, p, span, div, td, th, li, a {
+            body, p, span, div, td, th, li {
               color: ${textColor} !important;
             }
             a {
@@ -1260,11 +1260,12 @@ window.showEmail = async (id) => {
       }
     } else if (rawText.trim()){
       const pre = document.createElement('pre');
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       pre.style.whiteSpace = 'pre-wrap';
       pre.style.wordBreak = 'break-word';
-      pre.style.color = isDark ? '#e4e4e7' : '#09090b';
-      pre.style.background = isDark ? '#09090b' : '#ffffff';
+      pre.style.color = '#1e293b';
+      pre.style.background = '#ffffff';
+      pre.style.padding = '1rem';
+      pre.style.borderRadius = '8px';
       pre.textContent = rawText;
       host.appendChild(pre);
     } else {

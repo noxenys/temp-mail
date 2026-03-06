@@ -2279,6 +2279,11 @@ select:disabled{
   overflow: hidden;
   position: relative;
 }
+/* 深色主题下邮件正文区统一为白底黑字，避免邮件内容看不清 */
+[data-theme="dark"] .email-content-area{
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
 
 .email-content-area::before{
   content: '';
@@ -2296,6 +2301,44 @@ select:disabled{
   font-size: 15px;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+[data-theme="dark"] .email-content-text{
+  background: #ffffff;
+  color: #1e293b;
+}
+[data-theme="dark"] .email-content-text h1,
+[data-theme="dark"] .email-content-text h2,
+[data-theme="dark"] .email-content-text h3,
+[data-theme="dark"] .email-content-text p,
+[data-theme="dark"] .email-content-text span,
+[data-theme="dark"] .email-content-text li{
+  color: #1e293b;
+}
+[data-theme="dark"] .email-content-text a{
+  color: #2563eb;
+}
+[data-theme="dark"] .email-content-text code{
+  background: #f1f5f9;
+  color: #1e293b;
+}
+[data-theme="dark"] .email-content-text pre{
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #e2e8f0;
+}
+[data-theme="dark"] .email-content-text blockquote{
+  background: #f1f5f9;
+  color: #334155;
+  border-left-color: #2563eb;
+}
+/* 邮件正文 iframe/纯文本 容器在深色主题下也使用白底 */
+[data-theme="dark"] #email-render-host {
+  background: #ffffff;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+[data-theme="dark"] #email-render-host pre {
+  background: #ffffff !important;
+  color: #1e293b !important;
 }
 
 .code-highlight{

@@ -445,6 +445,28 @@ body {
   line-height: 1.6;
   color: var(--text);
 }
+/* 深色主题下邮件正文统一白底黑字，避免内容看不清 */
+[data-theme="dark"] .email-detail-body {
+  background: #ffffff;
+  color: #1e293b;
+}
+[data-theme="dark"] .email-detail-body p,
+[data-theme="dark"] .email-detail-body span,
+[data-theme="dark"] .email-detail-body div,
+[data-theme="dark"] .email-detail-body li,
+[data-theme="dark"] .email-detail-body td {
+  color: #1e293b;
+}
+[data-theme="dark"] .email-detail-body a {
+  color: #2563eb;
+}
+[data-theme="dark"] .modal-content .email-detail-body {
+  background: #ffffff;
+}
+[data-theme="dark"] .modal-detail-container .email-detail-body {
+  background: #ffffff;
+  color: #1e293b;
+}
 
 /* 响应式调整 */
 @media (max-width: 768px) {
