@@ -340,7 +340,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
   const LA_NO_DIGIT = /(?!\d)/;
 
   function tryReturn(n, body, subj) {
-    if (!n) return null;
+    if (!n) {
+      return null;
+    }
     if (n.length === 3) {
       const ctx = (body + ' ' + (subj || '')).toLowerCase();
       if (!/(?:pin|3[- ]?digit|three\s*digit|验证码|校验码|코드|security\s*code)/i.test(ctx)) { return null; }
@@ -367,7 +369,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
       const n = normalizeDigits(m[1]);
       if (n && (n.length >= 4 || /(?:pin|otp|code|验证码)\s*(?:for|is|:)?/i.test(sources.subject))) {
         const out = tryReturn(n, sources.body, sources.subject);
-        if (out) return out;
+        if (out) {
+          return out;
+        }
       }
     }
   }
@@ -382,7 +386,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
     if (m && m[1]) {
       const n = normalizeDigits(m[1]);
       const out = tryReturn(n, sources.body, sources.subject);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
   }
 
@@ -396,7 +402,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
     if (m && m[1]) {
       const n = normalizeDigits(m[1]);
       const out = tryReturn(n, sources.body, sources.subject);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
   }
 
@@ -409,7 +417,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
     while ((match = anyCodeRe.exec(sources.body)) !== null) {
       const n = normalizeDigits(match[1]);
       const out = tryReturn(n, sources.body, sources.subject);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
   }
 
@@ -423,7 +433,9 @@ export function extractVerificationCode({ subject = '', text = '', html = '' } =
     if (m && m[1]) {
       const n = normalizeDigits(m[1]);
       const out = tryReturn(n, sources.body, sources.subject);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
   }
 
@@ -457,7 +469,9 @@ export function extractLoginLink({ text = '', html = '' } = {}) {
 
   // 协议相对 URL 转为 https
   function ensureAbsolute(h) {
-    if (!h) return h;
+    if (!h) {
+      return h;
+    }
     const trimmed = h.trim();
     if (/^\/\//.test(trimmed)) { return 'https:' + trimmed; }
     return trimmed;
@@ -467,7 +481,9 @@ export function extractLoginLink({ text = '', html = '' } = {}) {
   const authPathPattern = /\/(verify|confirm|auth|login|magic|sign[-_]?in|activate|authorize|one[-_]?time|otp|verify[-_]?email|confirm[-_]?email|reset[-_]?password|sign[-_]?up|accept[-_]?invite|invitation|validate|authenticate)(?:[-_]?(?:link|magic|token|email))?/i;
   const hrefAuthLike = (href) => {
     const h = ensureAbsolute(href);
-    if (!h || !h.match(/^https?:\/\//i) || isLikelyPublicLink(h)) return false;
+    if (!h || !h.match(/^https?:\/\//i) || isLikelyPublicLink(h)) {
+      return false;
+    }
     const hasToken = /[?&]token=/i.test(h);
     const hasCode = /[?&]code=/i.test(h);
     return (hasToken || (hasCode && authPathPattern.test(h)) || authPathPattern.test(h));
@@ -498,7 +514,9 @@ export function extractLoginLink({ text = '', html = '' } = {}) {
   const isMagicLink = (u) => /magic[-_]?link|verify[-_]?magic|sign[-_]?in|one[-_]?time/i.test(u) && /[?&]token=/i.test(u);
 
   const authUrls = candidates.filter((url) => (authParams.test(url) || authPathPattern.test(url)) && !isLikelyPublicLink(url));
-  if (authUrls.length === 0) return '';
+  if (authUrls.length === 0) {
+    return '';
+  }
 
   const magicLinks = authUrls.filter(isMagicLink);
   const toReturn = magicLinks.length > 0 ? magicLinks : authUrls;
@@ -510,7 +528,9 @@ export function extractLoginLink({ text = '', html = '' } = {}) {
  * 合并折行 URL：把以 = 或 & 结尾的行与下一行拼成一段，便于正则匹配完整 URL
  */
 function mergeWrappedUrls(text) {
-  if (!text || !text.includes('\n')) return text;
+  if (!text || !text.includes('\n')) {
+    return text;
+  }
   return text.replace(/([=&])\s*\r?\n\s*/g, '$1');
 }
 
@@ -550,6 +570,12 @@ function cleanUrl(url) {
  */
 function isLikelyNonVerificationCode(digits, context = '') {
   if (!digits) {return true;}
+  const lowerContext = String(context || '').toLowerCase();
+
+  // 如果上下文明确在讲验证码/验证，则不要因为“年份/地址样式”误判丢掉
+  // 例如：某些模板可能把验证码后面紧跟产品名（大写开头），容易被地址模式误伤。
+  const verificationIndicators = /(?:verification|code|otp|one[-\s]?time|2fa|auth|login|confirm|security|pin|动态码|校验码|验证码|临时|一次性|认证)/i;
+  if (verificationIndicators.test(lowerContext)) { return false; }
   
   // 排除年份（2000-2099，常见于邮件日期、活动年份等）
   const year = parseInt(digits, 10);
@@ -559,7 +585,6 @@ function isLikelyNonVerificationCode(digits, context = '') {
   
   // 排除常见的邮政编码模式（5位数字，且上下文包含地址相关词汇）
   if (digits.length === 5) {
-    const lowerContext = context.toLowerCase();
     if (lowerContext.includes('address') || 
         lowerContext.includes('street') || 
         lowerContext.includes('zip') ||
@@ -570,9 +595,11 @@ function isLikelyNonVerificationCode(digits, context = '') {
   }
   
   // 排除包含在明显的地址格式中的数字（如 "1000 Sofia"）
-  const addressPattern = new RegExp(`\\b${digits}\\s+[A-Z][a-z]+(?:,|\\b)`, 'i');
-  if (addressPattern.test(context)) {
-    return true;
+  // 仅当上下文确实像“地址”时才启用，避免把验证码后紧跟的标题/产品名误判为地址。
+  const addressIndicators = /(?:address|street|zip|postal|city|state|province|country|road|st\.?|ave|avenue|blvd|lane|dr\.?|drive|suite|apt|unit|building|no\.?|number)/i;
+  if (addressIndicators.test(lowerContext)) {
+    const addressPattern = new RegExp(`\\b${digits}\\s+[A-Z][a-z]+(?:,|\\b)`, 'i');
+    if (addressPattern.test(context)) { return true; }
   }
   
   return false;

@@ -2126,15 +2126,27 @@ export async function handleEmailReceive(requestOrData, db, env) {
       }
 
       if (env.TELEGRAM_BOT_TOKEN && targetChatIds.length) {
-        const previewText = (text || '').slice(0, 200);
+        const previewText = String(previewBase || '').slice(0, 200);
+        const shouldEllipsis = String(previewBase || '').length > previewText.length;
+        const verificationCodeStr = String(verificationCode || '');
+        const isVerificationCodeLink = /^https?:\/\//i.test(verificationCodeStr);
+        let verificationBlock = '';
+        if (verificationCode) {
+          if (isVerificationCodeLink) {
+            verificationBlock = '<b>🔗 登录链接:</b> <a href="' + escapeHtml(verificationCodeStr) + '">点击登录</a>\n';
+          } else {
+            verificationBlock = '<b>🔑 验证码:</b> <code>' + escapeHtml(verificationCodeStr) + '</code>\n';
+          }
+        }
+
         const baseMsg =
-          '<b>📬 新邮件 #email</b>\n\n' +
+          '<b>📬 新邮件 ' + escapeHtml(mailbox) + '</b>\n\n' +
           '<b>📤 发件人:</b> ' + escapeHtml(displayFrom) + '\n' +
           '<b>📥 收件人:</b> ' + escapeHtml(to) + '\n' +
           '<b>📋 主题:</b> ' + escapeHtml(subject) + '\n' +
-          (verificationCode ? '<b>🔑 验证码:</b> <code>' + escapeHtml(verificationCode) + '</code>\n' : '') +
+          verificationBlock +
           (loginLink ? '<b>🔗 登录链接:</b> <a href="' + escapeHtml(loginLink) + '">点击登录</a>\n' : '') +
-          '\n' + escapeHtml(previewText) + (previewText.length < (text || '').length ? '...' : '');
+          '\n' + escapeHtml(previewText) + (shouldEllipsis ? '...' : '');
 
         for (const cid of targetChatIds) {
           try {
